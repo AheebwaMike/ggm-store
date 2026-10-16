@@ -1,7 +1,8 @@
 import json
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse
+from django.conf import settings
+from django.http import FileResponse, Http404, HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -302,3 +303,13 @@ def staff_order_slip(request, order_id):
         id=order_id,
     )
     return render(request, 'marketplace/staff_order_slip.html', {'order': order})
+
+
+def service_worker(request):
+    sw_path = settings.BASE_DIR / 'static' / 'sw.js'
+    if not sw_path.exists():
+        raise Http404
+    response = FileResponse(sw_path.open('rb'), content_type='application/javascript')
+    response['Service-Worker-Allowed'] = '/'
+    response['Cache-Control'] = 'no-cache'
+    return response
