@@ -1,3 +1,5 @@
+import json
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.contrib import messages
@@ -220,7 +222,12 @@ def staff_orders(request):
         if request.headers.get('HX-Request') == 'true'
         else 'marketplace/staff_orders.html'
     )
-    return render(request, template, context)
+    response = render(request, template, context)
+    if request.headers.get('HX-Request') == 'true':
+        response['HX-Trigger-After-Swap'] = json.dumps({
+            'staffOrdersUpdated': {'newCount': context['new_count']},
+        })
+    return response
 
 
 @login_required
@@ -284,3 +291,14 @@ def staff_toggle_stock(request, product_id):
         product.is_active = False
     product.save(update_fields=['manually_disabled', 'is_active'])
     return render(request, 'marketplace/_staff_product_row.html', {'product': product})
+
+
+@login_required
+def staff_order_slip(request, order_id):
+    order = get_object_or_404(
+        Order.objects.select_related(
+            'customer', 'customer__apartment'
+        ).prefetch_related('items__product'),
+        id=order_id,
+    )
+    return render(request, 'marketplace/staff_order_slip.html', {'order': order})

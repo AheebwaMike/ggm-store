@@ -3,6 +3,20 @@
 {% block title %}Staff Dashboard | GGM Store{% endblock %}
 
 {% block content %}
+<div id="ring-banner"
+     class="hidden fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white shadow-lg">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 font-bold text-lg animate-pulse">
+            <span>🔔</span>
+            <span>NEW ORDER!</span>
+        </div>
+        <button id="ring-stop-btn"
+                class="bg-white text-red-700 font-bold px-5 py-2 rounded-lg shadow hover:bg-red-50 active:scale-95 transition">
+            ⏹ STOP
+        </button>
+    </div>
+</div>
+
 <div class="space-y-5">
     <div class="flex items-start justify-between gap-4">
         <div>
@@ -40,9 +54,163 @@
         </a>
     </nav>
 
-    <div id="order-list" hx-get="{% url 'staff_orders' %}?status={{ status }}"
-         hx-trigger="every 20s" hx-swap="innerHTML" class="space-y-3">
-        {% include "marketplace/_staff_order_list.html" %}
+    <div id="order-list-container" data-new-count="{{ new_count }}"
+         hx-get="{% url 'staff_orders' %}?status={{ status }}"
+         hx-trigger="every 20s" hx-swap="innerHTML" hx-target="#order-list-inner">
+        <div id="order-list-inner" class="space-y-3">
+            {% include "marketplace/_staff_order_list.html" %}
+        </div>
     </div>
 </div>
+<script>
+(function() {
+    const STORAGE_KEY = 'ggm_last_new_count';
+    const RING_MAX_MS = 60000;
+    const RING_INTERVAL_MS = 3000;
+
+    let audioCtx = null;
+    let ringTimer = null;
+    let autoStopTimer = null;
+    let titleFlasher = null;
+    let isRinging = false;
+    const originalTitle = document.title;
+
+    function ensureAudio() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!audioCtx) {
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().catch((error) => console.warn('Audio resume failed', error));
+            }
+            return audioCtx;
+        } catch (error) {
+            console.warn('Audio unavailable', error);
+            return null;
+        }
+    }
+
+    ['click', 'touchstart', 'keydown'].forEach((eventName) => {
+        document.addEventListener(eventName, () => {
+            ensureAudio();
+            stopTitleFlash();
+        });
+    });
+
+    function playTone(ctx, frequency, startTime, duration, volume) {
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+        gain.gain.setValueAtTime(volume, startTime + duration - 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+    }
+
+    function playDingDong() {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        playTone(ctx, 1100, now, 0.35, 0.25);
+        playTone(ctx, 800, now + 0.35, 0.45, 0.25);
+    }
+
+    function startTitleFlash() {
+        if (titleFlasher) return;
+        let flip = false;
+        titleFlasher = setInterval(() => {
+            document.title = flip ? '🔔 NEW ORDER! 🔔' : originalTitle;
+            flip = !flip;
+        }, 800);
+    }
+
+    function stopTitleFlash() {
+        if (titleFlasher) {
+            clearInterval(titleFlasher);
+            titleFlasher = null;
+            document.title = originalTitle;
+        }
+    }
+
+    function showBanner() {
+        const banner = document.getElementById('ring-banner');
+        if (banner) banner.classList.remove('hidden');
+    }
+
+    function hideBanner() {
+        const banner = document.getElementById('ring-banner');
+        if (banner) banner.classList.add('hidden');
+    }
+
+    function startRinging() {
+        if (isRinging) return;
+        isRinging = true;
+        showBanner();
+        startTitleFlash();
+        playDingDong();
+        ringTimer = setInterval(playDingDong, RING_INTERVAL_MS);
+        autoStopTimer = setTimeout(stopRinging, RING_MAX_MS);
+    }
+
+    function stopRinging() {
+        if (!isRinging) return;
+        isRinging = false;
+        if (ringTimer) {
+            clearInterval(ringTimer);
+            ringTimer = null;
+        }
+        if (autoStopTimer) {
+            clearTimeout(autoStopTimer);
+            autoStopTimer = null;
+        }
+        stopTitleFlash();
+        hideBanner();
+    }
+
+    document.addEventListener('click', (event) => {
+        if (event.target && event.target.closest('#ring-stop-btn')) {
+            stopRinging();
+        }
+    });
+
+    function getNewCount() {
+        const container = document.getElementById('order-list-container');
+        return container ? parseInt(container.dataset.newCount || '0', 10) : 0;
+    }
+
+    function checkAndAlert() {
+        const current = getNewCount();
+        const storedCount = localStorage.getItem(STORAGE_KEY);
+        const last = storedCount === null ? current : parseInt(storedCount, 10);
+        if (current > last) {
+            startRinging();
+        }
+        if (current === 0) {
+            stopRinging();
+        }
+        localStorage.setItem(STORAGE_KEY, String(current));
+    }
+
+    if (localStorage.getItem(STORAGE_KEY) === null) {
+        localStorage.setItem(STORAGE_KEY, String(getNewCount()));
+    }
+
+    document.body.addEventListener('staffOrdersUpdated', (event) => {
+        const container = document.getElementById('order-list-container');
+        if (container) {
+            container.dataset.newCount = String(event.detail.newCount);
+            checkAndAlert();
+        }
+    });
+
+    setInterval(checkAndAlert, 30000);
+    checkAndAlert();
+})();
+</script>
 {% endblock %}

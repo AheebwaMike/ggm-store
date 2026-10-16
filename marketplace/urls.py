@@ -13,6 +13,7 @@ urlpatterns = [
     path('staff/', views.staff_orders, name='staff_orders'),
     path('staff/order/<int:order_id>/', views.staff_order_detail, name='staff_order_detail'),
     path('staff/order/<int:order_id>/action/', views.staff_order_action, name='staff_order_action'),
+    path('staff/order/<int:order_id>/slip/', views.staff_order_slip, name='staff_order_slip'),
     path('staff/stock/', views.staff_stock, name='staff_stock'),
     path('staff/stock/<int:product_id>/toggle/', views.staff_toggle_stock, name='staff_toggle_stock'),
 ]

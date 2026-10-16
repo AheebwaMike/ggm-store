@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Slip — Order #{{ order.id }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            margin: 0;
+            padding: 10px;
+            background: #f5f5f5;
+        }
+        .slip {
+            max-width: 320px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 16px;
+            border: 1px solid #ddd;
+        }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .big { font-size: 18px; }
+        hr { border: 0; border-top: 1px dashed #000; margin: 8px 0; }
+        .row { display: flex; justify-content: space-between; gap: 8px; margin: 3px 0; }
+        .row span:last-child { text-align: right; }
+        .items { margin: 8px 0; }
+        .item { display: flex; justify-content: space-between; gap: 8px; margin: 2px 0; }
+        .item span:first-child { overflow-wrap: anywhere; }
+        .item span:last-child { flex-shrink: 0; text-align: right; }
+        .total { font-size: 18px; font-weight: bold; }
+        .actions {
+            text-align: center;
+            margin: 16px auto;
+            max-width: 320px;
+        }
+        .actions button, .actions a {
+            display: inline-block;
+            padding: 10px 18px;
+            margin: 4px;
+            font-family: sans-serif;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 0;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-print { background: #ea580c; color: #fff; }
+        .btn-close { background: #e5e7eb; color: #111; }
+
+        @media print {
+            body { background: #fff; padding: 0; }
+            .slip { border: 0; box-shadow: none; padding: 0; max-width: 100%; }
+            .actions { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="slip">
+        <div class="center bold big">GGM STORE</div>
+        <div class="center">Order #{{ order.id }}</div>
+        <div class="center">{{ order.created_at|date:"d M Y, H:i" }}</div>
+        <hr>
+
+        <div class="row">
+            <span class="bold">CUSTOMER</span>
+            <span>{{ order.customer.name|default:"—" }}</span>
+        </div>
+        <div class="row">
+            <span class="bold">PHONE</span>
+            <span>{{ order.customer.phone_number }}</span>
+        </div>
+        {% if order.customer.apartment %}
+        <div class="row">
+            <span class="bold">LOCATION</span>
+            <span>{{ order.customer.apartment.name }}{% if order.customer.unit_number %} / {{ order.customer.unit_number }}{% endif %}</span>
+        </div>
+        {% endif %}
+        <hr>
+
+        <div class="bold">ITEMS:</div>
+        <div class="items">
+            {% for item in order.items.all %}
+            <div class="item">
+                <span>{{ item.quantity }} × {% if item.product %}{{ item.product.name|truncatechars:28 }}{% else %}Removed product{% endif %}</span>
+                <span>UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <hr>
+
+        <div class="row total">
+            <span>TOTAL</span>
+            <span>UGX {{ order.total_amount|floatformat:0 }}</span>
+        </div>
+        <div class="row">
+            <span class="bold">PAYMENT</span>
+            <span>{% if order.payment_method == 'cash' %}CASH ON DELIVERY{% else %}MOMO ON DELIVERY{% endif %}</span>
+        </div>
+        <hr>
+        <div class="center bold">COLLECT UGX {{ order.total_amount|floatformat:0 }}</div>
+        <div class="center" style="margin-top: 6px; font-size: 12px;">
+            Driver: hand cash to counter on return
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn-print" onclick="window.print()">🖨️ Print</button>
+        <a class="btn-close" href="{% url 'staff_order_detail' order.id %}">Close</a>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            setTimeout(() => window.print(), 300);
+        });
+    </script>
+</body>
+</html>
