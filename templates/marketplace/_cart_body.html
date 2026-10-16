@@ -1,0 +1,55 @@
+{% if items %}
+    <div class="space-y-3">
+        {% for item in items %}
+            <div class="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-800 text-sm">{{ item.product.name }}</p>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        UGX {{ item.product.selling_price|floatformat:0 }} × {{ item.quantity }}
+                    </p>
+                    <p class="text-orange-600 font-bold text-sm mt-1">
+                        UGX {{ item.line_total|floatformat:0 }}
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button hx-post="{% url 'cart_update' item.product.id %}"
+                            hx-vals='{"action":"dec"}'
+                            hx-target="#cart-body" hx-swap="innerHTML"
+                            class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 font-bold text-gray-700">−</button>
+
+                    <span class="w-6 text-center font-medium">{{ item.quantity }}</span>
+
+                    <button hx-post="{% url 'cart_update' item.product.id %}"
+                            hx-vals='{"action":"inc"}'
+                            hx-target="#cart-body" hx-swap="innerHTML"
+                            class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 font-bold text-gray-700">+</button>
+
+                    <button hx-post="{% url 'cart_update' item.product.id %}"
+                            hx-vals='{"action":"remove"}'
+                            hx-target="#cart-body" hx-swap="innerHTML"
+                            class="ml-2 text-red-500 hover:text-red-700 text-sm">Remove</button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-6 bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+        <span class="text-gray-600 font-medium">Subtotal</span>
+        <span class="text-xl font-bold text-gray-900">UGX {{ subtotal|floatformat:0 }}</span>
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'checkout' %}"
+           class="block w-full text-center bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg">
+            Proceed to Checkout
+        </a>
+    </div>
+{% else %}
+    <div class="bg-white rounded-lg shadow-sm p-8 text-center">
+        <p class="text-gray-500 mb-4">Your cart is empty.</p>
+        <a href="{% url 'home' %}"
+           class="inline-block bg-orange-600 hover:bg-orange-700 text-white font-medium px-5 py-2 rounded-lg">
+            Browse Products
+        </a>
+    </div>
+{% endif %}

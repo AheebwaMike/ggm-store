@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Dashboard | GGM Store{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+    <div class="flex items-start justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Staff Dashboard</h1>
+            <a href="{% url 'staff_stock' %}" class="mt-1 inline-block text-sm font-medium text-orange-600 hover:text-orange-700">
+                Manage Stock
+            </a>
+        </div>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="text-sm font-medium text-gray-600 hover:text-orange-600">Logout</button>
+        </form>
+    </div>
+
+    <nav class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Filter orders">
+        <a href="{% url 'staff_orders' %}?status=new"
+           class="shrink-0 rounded-full px-4 py-2 text-sm font-medium {% if status == 'new' %}bg-orange-600 text-white{% else %}bg-white text-gray-700{% endif %}">
+            New ({{ new_count }})
+        </a>
+        <a href="{% url 'staff_orders' %}?status=confirmed"
+           class="shrink-0 rounded-full px-4 py-2 text-sm font-medium {% if status == 'confirmed' %}bg-orange-600 text-white{% else %}bg-white text-gray-700{% endif %}">
+            Confirmed ({{ confirmed_count }})
+        </a>
+        <a href="{% url 'staff_orders' %}?status=packed"
+           class="shrink-0 rounded-full px-4 py-2 text-sm font-medium {% if status == 'packed' %}bg-orange-600 text-white{% else %}bg-white text-gray-700{% endif %}">
+            Packed ({{ packed_count }})
+        </a>
+        <a href="{% url 'staff_orders' %}?status=delivered"
+           class="shrink-0 rounded-full px-4 py-2 text-sm font-medium {% if status == 'delivered' %}bg-orange-600 text-white{% else %}bg-white text-gray-700{% endif %}">
+            Delivered ({{ delivered_count }})
+        </a>
+        <a href="{% url 'staff_orders' %}?status=all"
+           class="shrink-0 rounded-full px-4 py-2 text-sm font-medium {% if status == 'all' %}bg-orange-600 text-white{% else %}bg-white text-gray-700{% endif %}">
+            All
+        </a>
+    </nav>
+
+    <div id="order-list" hx-get="{% url 'staff_orders' %}?status={{ status }}"
+         hx-trigger="every 20s" hx-swap="innerHTML" class="space-y-3">
+        {% include "marketplace/_staff_order_list.html" %}
+    </div>
+</div>
+{% endblock %}

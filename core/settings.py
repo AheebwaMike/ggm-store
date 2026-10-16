@@ -132,3 +132,7 @@ MAILERS = {
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'staff_orders'
+LOGOUT_REDIRECT_URL = 'login'

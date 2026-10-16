@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Order Received - GGM Store{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-lg shadow-sm p-6 text-center space-y-4">
+    <div class="text-5xl" aria-hidden="true">✅</div>
+    <h1 class="text-2xl font-bold text-gray-900">Order Received!</h1>
+    <p class="text-gray-700">
+        Your order <span class="text-orange-600 font-bold">#{{ order.id }}</span> has been placed.
+    </p>
+    <p class="text-sm text-gray-600">
+        We will call you shortly at {{ order.customer.phone_number }} to confirm your order and delivery details.
+    </p>
+
+    <div class="bg-gray-50 rounded-lg p-4 text-left space-y-3">
+        {% for item in order.items.all %}
+            <div class="flex justify-between gap-3 text-sm">
+                <span>{{ item.quantity }} × {{ item.product.name }}</span>
+                <span class="shrink-0">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
+            </div>
+        {% endfor %}
+        <div class="border-t border-gray-200 pt-3 flex justify-between font-bold">
+            <span>Total</span>
+            <span>UGX {{ order.total_amount|floatformat:0 }}</span>
+        </div>
+        <p class="text-xs text-gray-600">
+            Payment: {% if order.payment_method == 'cash' %}Cash on Delivery{% else %}MoMo on Delivery{% endif %}
+        </p>
+    </div>
+
+    <a href="{% url 'home' %}"
+       class="block w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg">
+        Continue Shopping
+    </a>
+</div>
+{% endblock %}

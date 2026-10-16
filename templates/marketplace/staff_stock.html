@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Stock | GGM Store{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-xl space-y-5">
+    <div>
+        <a href="{% url 'staff_orders' %}" class="text-sm font-medium text-orange-600 hover:text-orange-700">
+            &larr; Back to Orders
+        </a>
+        <h1 class="mt-2 text-2xl font-bold text-gray-900">Manage Stock</h1>
+    </div>
+
+    <form method="get" class="flex gap-2">
+        <label for="product-search" class="sr-only">Search products by name or code</label>
+        <input id="product-search" type="search" name="q" value="{{ q }}"
+               placeholder="Product name or code"
+               class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-3">
+        <button type="submit" class="rounded-lg bg-orange-600 px-5 py-3 font-bold text-white hover:bg-orange-700">
+            Search
+        </button>
+    </form>
+
+    {% if q %}
+        {% if products %}
+        <div class="space-y-3">
+            {% for product in products %}
+                {% include "marketplace/_staff_product_row.html" with product=product %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="rounded-lg bg-white p-6 text-center text-gray-500 shadow-sm">No products found.</p>
+        {% endif %}
+    {% else %}
+    <p class="rounded-lg bg-white p-6 text-center text-gray-500 shadow-sm">
+        Type a product name or code to search.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

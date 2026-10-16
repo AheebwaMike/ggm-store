@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - GGM Store{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Checkout</h1>
+
+<div class="bg-white rounded-lg shadow-sm p-5 space-y-4">
+    {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+                <div class="{% if message.level_tag == 'error' %}bg-red-50 text-red-700{% else %}bg-yellow-50 text-yellow-800{% endif %} rounded-lg p-3 text-sm">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+
+        <div>
+            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
+            <input id="phone" name="phone" type="tel" required placeholder="07XXXXXXXX"
+                   value="{{ form_data.phone }}"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+            <p class="text-xs text-gray-500 mt-1">We will call this number to confirm your order.</p>
+        </div>
+
+        <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name (optional)</label>
+            <input id="name" name="name" type="text" value="{{ form_data.name }}"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+        </div>
+
+        <div>
+            <label for="apartment" class="block text-sm font-medium text-gray-700 mb-1">Apartment</label>
+            <select id="apartment" name="apartment" required
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <option value="">Select your apartment</option>
+                {% for apt in apartments %}
+                    <option value="{{ apt.id }}" {% if form_data.apartment == apt.id|stringformat:"s" %}selected{% endif %}>{{ apt.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label for="unit_number" class="block text-sm font-medium text-gray-700 mb-1">Unit number (optional)</label>
+            <input id="unit_number" name="unit_number" type="text" placeholder="e.g., Apt 4B"
+                   value="{{ form_data.unit_number }}"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+        </div>
+
+        <fieldset>
+            <legend class="block text-sm font-medium text-gray-700 mb-1">Payment method</legend>
+            <div class="flex gap-3">
+                <label class="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2">
+                    <input type="radio" name="payment_method" value="cash"
+                           {% if not form_data.payment_method or form_data.payment_method == 'cash' %}checked{% endif %}>
+                    <span class="text-sm">Cash on Delivery</span>
+                </label>
+                <label class="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2">
+                    <input type="radio" name="payment_method" value="momo"
+                           {% if form_data.payment_method == 'momo' %}checked{% endif %}>
+                    <span class="text-sm">MoMo on Delivery</span>
+                </label>
+            </div>
+        </fieldset>
+
+        <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div class="flex justify-between text-sm text-gray-600">
+                <span>Items ({{ item_count }})</span>
+                <span>UGX {{ subtotal|floatformat:0 }}</span>
+            </div>
+            <div class="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
+                <span>Total</span>
+                <span>UGX {{ subtotal|floatformat:0 }}</span>
+            </div>
+        </div>
+
+        <button type="submit"
+                class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg">
+            Place Order
+        </button>
+    </form>
+
+    <p class="text-xs text-center text-gray-500">We will call you shortly to confirm your order and delivery.</p>
+</div>
+{% endblock %}

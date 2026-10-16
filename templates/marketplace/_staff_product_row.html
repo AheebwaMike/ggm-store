@@ -1,0 +1,20 @@
+<div id="product-{{ product.id }}" class="rounded-lg bg-white p-4 shadow-sm">
+    <div class="mb-3">
+        <h2 class="font-semibold text-gray-900">{{ product.name }}</h2>
+        <p class="text-sm text-gray-500">{{ product.code }} · UGX {{ product.selling_price|floatformat:0 }}</p>
+    </div>
+    <form method="post" action="{% url 'staff_toggle_stock' product.id %}"
+          hx-post="{% url 'staff_toggle_stock' product.id %}"
+          hx-target="#product-{{ product.id }}" hx-swap="outerHTML">
+        {% csrf_token %}
+        {% if product.manually_disabled %}
+        <button type="submit" class="w-full rounded-lg bg-red-600 px-3 py-3 text-sm font-bold text-white hover:bg-red-700">
+            Out of Stock — Tap to Enable
+        </button>
+        {% else %}
+        <button type="submit" class="w-full rounded-lg bg-green-600 px-3 py-3 text-sm font-bold text-white hover:bg-green-700">
+            In Stock — Tap to Disable
+        </button>
+        {% endif %}
+    </form>
+</div>
