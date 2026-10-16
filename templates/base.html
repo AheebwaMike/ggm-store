@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GGM Store{% endblock %}</title>
+    
+    <!-- Tailwind via CDN (we'll replace this with a proper build later) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTMX for dynamic interactions -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- Top Nav -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-orange-600">GGM Store</a>
+            <div class="flex items-center gap-4">
+                <a href="/cart/" class="text-gray-700 hover:text-orange-600 font-medium">
+                    🛒 Cart <span id="cart-count" class="text-xs bg-orange-600 text-white rounded-full px-2 py-0.5"></span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-100 text-center text-sm text-gray-500 py-4">
+        &copy; {% now "Y" %} GGM Store. Delivering to nearby apartments.
+    </footer>
+
+</body>
+</html>
