@@ -3,11 +3,13 @@
 {% block title %}Home - GGM Store{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <form method="get" action="{% url 'home' %}" class="relative">
+<div class="mb-8">
+    <form method="get" action="{% url 'home' %}" class="relative group">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <i data-lucide="search" class="w-5 h-5 text-slate-400 group-focus-within:text-orange-500 transition-colors"></i>
+        </div>
         <input type="text" name="q" value="{{ query }}" placeholder="Search for milk, sugar, soap..."
-               class="w-full border border-gray-300 rounded-xl py-3 px-4 pl-12 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm text-gray-800">
-        <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-4 top-3.5"></i>
+               class="w-full bg-white border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400">
     </form>
 </div>
 
@@ -19,38 +21,40 @@
 
 {% if query %}
     <div class="flex items-center justify-between mb-4">
-        <h1 class="text-xl font-bold text-gray-800">Results for "{{ query }}"</h1>
+        <h1 class="text-xl font-bold text-slate-800">Results for "{{ query }}"</h1>
         <a href="{% url 'home' %}" class="text-sm text-orange-600 hover:underline">Clear search</a>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         {% for product in search_results %}
-            <div class="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
-                <div class="flex items-center gap-3 w-full">
-                    <div class="w-16 h-16 shrink-0 rounded-lg bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center overflow-hidden border border-orange-100">
-                        {% if product.image %}
-                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
-                        {% else %}
-                            {% include "marketplace/_product_image_placeholder.html" with product=product icon_size="h-9 w-9" %}
-                        {% endif %}
-                    </div>
-                    <div class="flex-1 min-w-0 pr-2">
-                        <p class="font-medium text-gray-800 text-sm truncate">{{ product.name }}</p>
-                        <p class="text-xs text-gray-500 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
-                        <p class="text-orange-600 font-bold mt-1">UGX {{ product.selling_price|floatformat:0 }}</p>
-                    </div>
-                    <button
-                        hx-post="{% url 'add_to_cart' product.id %}"
-                        hx-swap="none"
-                        class="bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium px-4 py-2 rounded-lg shrink-0">
-                        Add
-                    </button>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 active:bg-slate-50 transition-colors">
+                <div class="w-16 h-16 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden border border-slate-100">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                    {% else %}
+                        <i data-lucide="shopping-basket" class="w-8 h-8 text-orange-200"></i>
+                    {% endif %}
                 </div>
+                <div class="flex-1 min-w-0 pr-2">
+                    <p class="font-medium text-slate-800 text-sm truncate">{{ product.name }}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
+                    <p class="text-orange-600 font-bold mt-1">UGX {{ product.selling_price|floatformat:0 }}</p>
+                </div>
+                <button
+                    hx-post="{% url 'add_to_cart' product.id %}"
+                    hx-swap="none"
+                    class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shrink-0 shadow-sm"
+                    aria-label="Add {{ product.name }} to cart">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                </button>
             </div>
         {% empty %}
-            <div class="col-span-full py-12 text-center bg-white rounded-lg shadow-sm">
-                <p class="text-gray-500 text-lg mb-2">No products found.</p>
-                <p class="text-sm text-gray-400">Try searching for something else, like "milk" or "sugar".</p>
+            <div class="col-span-full py-12 text-center bg-white rounded-2xl shadow-sm border border-slate-100">
+                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="search-x" class="w-8 h-8 text-slate-400"></i>
+                </div>
+                <p class="text-slate-700 font-medium text-lg mb-1">No products found</p>
+                <p class="text-sm text-slate-500">Try searching for something else, like "milk" or "sugar".</p>
             </div>
         {% endfor %}
     </div>
@@ -63,25 +67,28 @@
         </h2>
         <div class="flex overflow-x-auto gap-3 pb-2 snap-x">
             {% for product in frequent_products %}
-            <div class="min-w-[160px] w-[160px] bg-white rounded-xl shadow-sm p-4 flex flex-col justify-between snap-start border border-gray-100">
-                <div class="w-full h-24 bg-gradient-to-br from-orange-50 to-amber-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-orange-100">
-                    {% if product.image %}
-                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
-                    {% else %}
-                        {% include "marketplace/_product_image_placeholder.html" with product=product icon_size="h-12 w-12" %}
-                    {% endif %}
+            <div class="min-w-[150px] w-[150px] bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-col justify-between snap-start relative group">
+                {% if product.image %}
+                <div class="w-full h-24 rounded-xl overflow-hidden mb-2 bg-slate-50 relative">
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
                 </div>
+                {% else %}
+                <div class="w-full h-24 rounded-xl bg-orange-50 mb-2 flex items-center justify-center text-orange-200 relative">
+                    <i data-lucide="shopping-basket" class="w-10 h-10"></i>
+                </div>
+                {% endif %}
                 <div>
-                    <p class="font-medium text-gray-800 text-sm line-clamp-2 leading-tight">{{ product.name }}</p>
-                    <p class="text-xs text-gray-500 mt-1">{{ product.unit.name|default:"PCS" }}</p>
+                    <p class="font-medium text-slate-800 text-sm line-clamp-2 leading-tight min-h-[2.5rem]">{{ product.name }}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
                 </div>
-                <div class="mt-3">
-                    <p class="text-orange-600 font-bold mb-2">UGX {{ product.selling_price|floatformat:0 }}</p>
+                <div class="mt-2 flex items-end justify-between">
+                    <p class="text-orange-600 font-bold text-sm">UGX {{ product.selling_price|floatformat:0 }}</p>
                     <button
                         hx-post="{% url 'add_to_cart' product.id %}"
                         hx-swap="none"
-                        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium py-1.5 rounded-lg transition">
-                        + Add
+                        class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shadow-sm"
+                        aria-label="Add {{ product.name }} to cart">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
@@ -97,28 +104,30 @@
         </h2>
         <div class="flex overflow-x-auto gap-3 pb-2 snap-x">
             {% for product in featured_products %}
-            <div class="min-w-[160px] w-[160px] bg-white rounded-xl shadow-sm p-4 flex flex-col justify-between snap-start border border-orange-100 relative">
-                <div class="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">
-                    PROMO
+            <div class="min-w-[150px] w-[150px] bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-col justify-between snap-start relative group">
+                {% if product.image %}
+                <div class="w-full h-24 rounded-xl overflow-hidden mb-2 bg-slate-50 relative">
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                    <div class="absolute top-0 left-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg z-10">PROMO</div>
                 </div>
-                <div class="w-full h-24 bg-gradient-to-br from-orange-50 to-amber-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-orange-100">
-                    {% if product.image %}
-                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
-                    {% else %}
-                        {% include "marketplace/_product_image_placeholder.html" with product=product icon_size="h-12 w-12" %}
-                    {% endif %}
+                {% else %}
+                <div class="w-full h-24 rounded-xl bg-orange-50 mb-2 flex items-center justify-center text-orange-200 relative">
+                    <i data-lucide="shopping-basket" class="w-10 h-10"></i>
+                    <div class="absolute top-0 left-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg z-10">PROMO</div>
                 </div>
+                {% endif %}
                 <div>
-                    <p class="font-medium text-gray-800 text-sm line-clamp-2 leading-tight">{{ product.name }}</p>
-                    <p class="text-xs text-gray-500 mt-1">{{ product.unit.name|default:"PCS" }}</p>
+                    <p class="font-medium text-slate-800 text-sm line-clamp-2 leading-tight min-h-[2.5rem]">{{ product.name }}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
                 </div>
-                <div class="mt-3">
-                    <p class="text-orange-600 font-bold mb-2">UGX {{ product.selling_price|floatformat:0 }}</p>
+                <div class="mt-2 flex items-end justify-between">
+                    <p class="text-orange-600 font-bold text-sm">UGX {{ product.selling_price|floatformat:0 }}</p>
                     <button
                         hx-post="{% url 'add_to_cart' product.id %}"
                         hx-swap="none"
-                        class="w-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium py-1.5 rounded-lg">
-                        Add
+                        class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shadow-sm"
+                        aria-label="Add {{ product.name }} to cart">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
@@ -136,14 +145,14 @@
 
     <h1 class="text-2xl font-bold mb-4 text-gray-800">Shop by Category</h1>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
         {% for group in groups %}
             <a href="{% url 'product_list' group.id %}"
-               class="bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 flex flex-col items-center justify-center text-center h-28 group">
-                <span class="font-semibold text-gray-700 group-hover:text-orange-600 transition text-sm">{{ group.name }}</span>
+               class="bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-orange-200 transition-all duration-200 p-4 flex flex-col items-center justify-center text-center h-28 active:scale-95 group">
+                <span class="font-semibold text-slate-700 group-hover:text-orange-600 transition text-sm leading-tight">{{ group.name }}</span>
             </a>
         {% empty %}
-            <p class="col-span-full text-gray-500">No categories found.</p>
+            <p class="col-span-full text-slate-500 text-center py-8">No categories found.</p>
         {% endfor %}
     </div>
 {% endif %}
