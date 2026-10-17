@@ -1,6 +1,15 @@
 # marketplace/admin.py
 from django.contrib import admin
-from .models import ProductGroup, Unit, Product, Apartment, Customer, Order, OrderItem
+from .models import (
+    Apartment,
+    Customer,
+    FeaturedCampaign,
+    Order,
+    OrderItem,
+    Product,
+    ProductGroup,
+    Unit,
+)
 
 @admin.register(ProductGroup)
 class ProductGroupAdmin(admin.ModelAdmin):
@@ -39,3 +48,10 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'payment_method', 'created_at')
     search_fields = ('id', 'customer__name', 'customer__phone_number')
     inlines = [OrderItemInline]
+
+
+@admin.register(FeaturedCampaign)
+class FeaturedCampaignAdmin(admin.ModelAdmin):
+    list_display = ('name', 'starts_at', 'ends_at', 'is_active')
+    list_filter = ('is_active', 'starts_at', 'ends_at')
+    filter_horizontal = ('products',)

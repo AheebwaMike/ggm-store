@@ -6,10 +6,19 @@ from django.http import FileResponse, Http404, HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import ensure_csrf_cookie
-from .models import ProductGroup, Product, Apartment, Customer, Order, OrderItem
+from .models import (
+    Apartment,
+    Customer,
+    FeaturedCampaign,
+    Order,
+    OrderItem,
+    Product,
+    ProductGroup,
+)
 
 
 # ---------- Cart helpers ----------
@@ -34,6 +43,17 @@ def home(request):
     query = request.GET.get('q', '').strip()
     groups = ProductGroup.objects.all().order_by('name')
     search_results = []
+    now = timezone.now()
+    active_campaigns = FeaturedCampaign.objects.filter(
+        is_active=True,
+        starts_at__lte=now,
+        ends_at__gte=now,
+    )
+    featured_products = Product.objects.filter(
+        featured_in__in=active_campaigns,
+        is_active=True,
+        selling_price__gt=0,
+    ).distinct()[:12]
     current_customer = None
 
     customer_id = request.session.get('customer_id')
@@ -42,6 +62,16 @@ def home(request):
             current_customer = Customer.objects.get(id=customer_id)
         except (Customer.DoesNotExist, ValueError, TypeError):
             request.session.pop('customer_id', None)
+
+    frequent_products = []
+    if current_customer:
+        frequent_products = Product.objects.filter(
+            orderitem__order__customer=current_customer,
+            is_active=True,
+            selling_price__gt=0,
+        ).annotate(
+            times_ordered=Count('orderitem')
+        ).order_by('-times_ordered')[:6]
 
     if query:
         search_results = Product.objects.filter(
@@ -55,6 +85,8 @@ def home(request):
         'query': query,
         'search_results': search_results,
         'current_customer': current_customer,
+        'frequent_products': frequent_products,
+        'featured_products': featured_products,
     })
 
 

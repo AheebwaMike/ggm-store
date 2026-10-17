@@ -76,4 +76,21 @@ class OrderItem(models.Model):
     
     def __str__(self):
         return f"{self.quantity} x {self.product.name}"
+
+
+class FeaturedCampaign(models.Model):
+    name = models.CharField(
+        max_length=255,
+        help_text="Internal name for this campaign (e.g., 'Weekend Sugar Promo')",
+    )
+    products = models.ManyToManyField(Product, related_name='featured_in')
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Uncheck to kill this campaign early",
+    )
+
+    def __str__(self):
+        return self.name
     

@@ -43,6 +43,63 @@
     </div>
 
 {% else %}
+    {% if frequent_products %}
+    <div class="mb-8">
+        <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
+            <span>🔄</span> Buy Again
+        </h2>
+        <div class="flex overflow-x-auto gap-3 pb-2 snap-x">
+            {% for product in frequent_products %}
+            <div class="min-w-[160px] w-[160px] bg-white rounded-xl shadow-sm p-4 flex flex-col justify-between snap-start border border-gray-100">
+                <div>
+                    <p class="font-medium text-gray-800 text-sm line-clamp-2 leading-tight">{{ product.name }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ product.unit.name|default:"PCS" }}</p>
+                </div>
+                <div class="mt-3">
+                    <p class="text-orange-600 font-bold mb-2">UGX {{ product.selling_price|floatformat:0 }}</p>
+                    <button
+                        hx-post="{% url 'add_to_cart' product.id %}"
+                        hx-swap="none"
+                        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium py-1.5 rounded-lg transition">
+                        + Add
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if featured_products %}
+    <div class="mb-8">
+        <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
+            <span>⭐</span> Featured Today
+        </h2>
+        <div class="flex overflow-x-auto gap-3 pb-2 snap-x">
+            {% for product in featured_products %}
+            <div class="min-w-[160px] w-[160px] bg-white rounded-xl shadow-sm p-4 flex flex-col justify-between snap-start border border-orange-100 relative">
+                <div class="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">
+                    PROMO
+                </div>
+                <div>
+                    <p class="font-medium text-gray-800 text-sm line-clamp-2 leading-tight">{{ product.name }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ product.unit.name|default:"PCS" }}</p>
+                </div>
+                <div class="mt-3">
+                    <p class="text-orange-600 font-bold mb-2">UGX {{ product.selling_price|floatformat:0 }}</p>
+                    <button
+                        hx-post="{% url 'add_to_cart' product.id %}"
+                        hx-swap="none"
+                        class="w-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium py-1.5 rounded-lg">
+                        Add
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if current_customer %}
     <div class="mb-6 bg-orange-50 border border-orange-100 rounded-lg p-4">
         <p class="text-orange-800 font-medium">Welcome back, {{ current_customer.name|default:"friend" }}!</p>
