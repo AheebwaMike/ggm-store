@@ -31,8 +31,22 @@ def _cart_total_items(cart):
 # ---------- Views ----------
 @ensure_csrf_cookie
 def home(request):
+    query = request.GET.get('q', '').strip()
     groups = ProductGroup.objects.all().order_by('name')
-    return render(request, 'marketplace/home.html', {'groups': groups})
+    search_results = []
+
+    if query:
+        search_results = Product.objects.filter(
+            Q(name__icontains=query) | Q(code__icontains=query),
+            is_active=True,
+            selling_price__gt=0,
+        ).order_by('name')[:50]
+
+    return render(request, 'marketplace/home.html', {
+        'groups': groups,
+        'query': query,
+        'search_results': search_results,
+    })
 
 
 def product_list(request, group_id):
