@@ -43,6 +43,13 @@
     </div>
 
 {% else %}
+    {% if current_customer %}
+    <div class="mb-6 bg-orange-50 border border-orange-100 rounded-lg p-4">
+        <p class="text-orange-800 font-medium">Welcome back, {{ current_customer.name|default:"friend" }}!</p>
+        <p class="text-sm text-orange-600 mt-1">Your delivery details for {{ current_customer.apartment.name|default:"your apartment" }} are saved.</p>
+    </div>
+    {% endif %}
+
     <h1 class="text-2xl font-bold mb-4 text-gray-800">Shop by Category</h1>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">

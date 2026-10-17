@@ -34,6 +34,14 @@ def home(request):
     query = request.GET.get('q', '').strip()
     groups = ProductGroup.objects.all().order_by('name')
     search_results = []
+    current_customer = None
+
+    customer_id = request.session.get('customer_id')
+    if customer_id:
+        try:
+            current_customer = Customer.objects.get(id=customer_id)
+        except (Customer.DoesNotExist, ValueError, TypeError):
+            request.session.pop('customer_id', None)
 
     if query:
         search_results = Product.objects.filter(
@@ -46,6 +54,7 @@ def home(request):
         'groups': groups,
         'query': query,
         'search_results': search_results,
+        'current_customer': current_customer,
     })
 
 
@@ -139,6 +148,14 @@ def checkout(request):
         return redirect('home')
 
     apartments = Apartment.objects.all().order_by('name')
+    saved_customer = None
+    customer_id = request.session.get('customer_id')
+    if customer_id:
+        try:
+            saved_customer = Customer.objects.get(id=customer_id)
+        except (Customer.DoesNotExist, ValueError, TypeError):
+            request.session.pop('customer_id', None)
+
     if request.method == 'POST':
         phone = request.POST.get('phone', '').strip()
         name = request.POST.get('name', '').strip()
@@ -177,6 +194,7 @@ def checkout(request):
                     'unit_number': unit_number,
                 },
             )
+            request.session['customer_id'] = customer.id
             order = Order.objects.create(
                 customer=customer,
                 status='new',
@@ -196,11 +214,20 @@ def checkout(request):
 
         return redirect('order_success', order_id=order.id)
 
+    form_data = {}
+    if saved_customer:
+        form_data = {
+            'phone': saved_customer.phone_number,
+            'name': saved_customer.name,
+            'apartment': str(saved_customer.apartment.id) if saved_customer.apartment else '',
+            'unit_number': saved_customer.unit_number,
+        }
+
     return render(request, 'marketplace/checkout.html', {
         'items': items,
         'subtotal': subtotal,
         'apartments': apartments,
-        'form_data': {},
+        'form_data': form_data,
         'item_count': sum(item['quantity'] for item in items),
     })
 
