@@ -7,9 +7,7 @@
     <form method="get" action="{% url 'home' %}" class="relative">
         <input type="text" name="q" value="{{ query }}" placeholder="Search for milk, sugar, soap..."
                class="w-full border border-gray-300 rounded-xl py-3 px-4 pl-12 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm text-gray-800">
-        <svg class="w-5 h-5 text-gray-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-        </svg>
+        <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-4 top-3.5"></i>
     </form>
 </div>
 
@@ -61,7 +59,7 @@
     {% if frequent_products %}
     <div class="mb-8">
         <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
-            <span>🔄</span> Buy Again
+            <i data-lucide="rotate-ccw" class="w-5 h-5 text-orange-500"></i> Buy Again
         </h2>
         <div class="flex overflow-x-auto gap-3 pb-2 snap-x">
             {% for product in frequent_products %}
@@ -95,7 +93,7 @@
     {% if featured_products %}
     <div class="mb-8">
         <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
-            <span>⭐</span> Featured Today
+            <i data-lucide="sparkles" class="w-5 h-5 text-orange-500"></i> Featured Today
         </h2>
         <div class="flex overflow-x-auto gap-3 pb-2 snap-x">
             {% for product in featured_products %}

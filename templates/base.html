@@ -3,6 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GGM Store{% endblock %}</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind with custom config for Inter -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script>
+        document.addEventListener('htmx:configRequest', function(evt) {
+            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            evt.detail.headers['X-CSRFToken'] = token;
+        });
+    </script>
+
     <meta name="csrf-token" content="{{ csrf_token }}">
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#ea580c">
@@ -11,48 +41,68 @@
     <meta name="apple-mobile-web-app-title" content="GGM Store">
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
     <link rel="icon" href="/static/icons/favicon.ico" type="image/x-icon">
-    <title>{% block title %}GGM Store{% endblock %}</title>
-    
-    <!-- Tailwind via CDN (we'll replace this with a proper build later) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- HTMX for dynamic interactions -->
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <script>
-        document.addEventListener('htmx:configRequest', function(evt) {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            evt.detail.headers['X-CSRFToken'] = token;
-        });
-    </script>
-    
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
 
-    <!-- Top Nav -->
-    <header class="bg-white shadow-sm sticky top-0 z-50">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+    <!-- Top Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-40 hidden md:block">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="/" class="text-xl font-bold text-orange-600">GGM Store</a>
-            <div class="flex items-center gap-4">
-                <a href="{% url 'customer_orders' %}" class="text-gray-700 hover:text-orange-600 font-medium hidden sm:block">
+            <a href="/" class="text-xl font-bold text-orange-600 tracking-tight flex items-center gap-2">
+                <i data-lucide="store" class="w-6 h-6"></i>
+                GGM Store
+            </a>
+            <div class="flex items-center gap-6">
+                <a href="{% url 'customer_orders' %}" class="text-slate-600 hover:text-orange-600 font-medium text-sm transition">
                     My Orders
                 </a>
-                <a href="/cart/" class="text-gray-700 hover:text-orange-600 font-medium flex items-center gap-1">
-                    🛒 Cart
-                    <span id="cart-count"
-                        class="text-xs bg-orange-600 text-white rounded-full px-2 py-0.5 min-w-[20px] text-center"
-                        hx-get="{% url 'cart_count' %}"
-                        hx-trigger="load, cartUpdated from:body"
-                        hx-swap="innerHTML">0</span>
+                <a href="/cart/" class="flex items-center gap-2 text-slate-700 hover:text-orange-600 font-medium transition">
+                    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                    Cart
+                    <span id="cart-count-desktop"
+                          class="text-xs bg-orange-600 text-white rounded-full px-2 py-0.5 min-w-[20px] text-center font-bold"
+                          hx-get="{% url 'cart_count' %}"
+                          hx-trigger="load, cartUpdated from:body"
+                          hx-swap="innerHTML">0</span>
                 </a>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
+    <main class="flex-1 max-w-5xl mx-auto w-full px-4 py-6 pb-24 md:pb-6">
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 pb-safe">
+        <div class="flex justify-around items-center h-16">
+            <a href="/" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-orange-600 transition">
+                <i data-lucide="home" class="w-6 h-6 mb-1"></i>
+                <span class="text-[10px] font-medium">Home</span>
+            </a>
+
+            <a href="{% url 'customer_orders' %}" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-orange-600 transition">
+                <i data-lucide="receipt" class="w-6 h-6 mb-1"></i>
+                <span class="text-[10px] font-medium">Orders</span>
+            </a>
+
+            <a href="/cart/" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-orange-600 transition relative">
+                <div class="relative">
+                    <i data-lucide="shopping-bag" class="w-6 h-6 mb-1"></i>
+                    <span id="cart-count-mobile"
+                          class="absolute -top-1 -right-2 text-[10px] bg-orange-600 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center font-bold"
+                          hx-get="{% url 'cart_count' %}"
+                          hx-trigger="load, cartUpdated from:body"
+                          hx-swap="innerHTML">0</span>
+                </div>
+                <span class="text-[10px] font-medium">Cart</span>
+            </a>
+        </div>
+    </nav>
 
     <!-- Footer -->
     <footer class="bg-gray-100 text-center text-sm text-gray-500 py-4">
@@ -65,6 +115,11 @@
                 navigator.serviceWorker.register('/sw.js', { scope: '/' })
                     .catch((err) => console.warn('Service worker registration failed:', err));
             });
+        }
+    </script>
+    <script>
+        if (window.lucide) {
+            window.lucide.createIcons();
         }
     </script>
 </body>
