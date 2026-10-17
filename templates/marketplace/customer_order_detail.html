@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Order #{{ order.id }} - GGM Store{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <a href="{% url 'customer_orders' %}" class="text-sm text-orange-600 hover:underline mb-4 inline-block">&larr; Back to My Orders</a>
+
+    <div class="bg-white rounded-xl shadow-sm p-6 mb-4">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Order #{{ order.id }}</h1>
+                <p class="text-gray-500 text-sm mt-1">{{ order.created_at|date:"d M Y, H:i" }}</p>
+            </div>
+
+            {% if order.status == 'new' %}
+                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-yellow-100 text-yellow-800">Pending Call</span>
+            {% elif order.status == 'confirmed' %}
+                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-blue-100 text-blue-800">Confirmed</span>
+            {% elif order.status == 'packed' %}
+                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-indigo-100 text-indigo-800">Out for Delivery</span>
+            {% elif order.status == 'delivered' %}
+                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-green-100 text-green-800">Delivered</span>
+            {% else %}
+                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-red-100 text-red-800">Cancelled</span>
+            {% endif %}
+        </div>
+
+        <div class="border-t pt-4">
+            <h2 class="font-bold text-gray-800 mb-3">Items</h2>
+            <div class="space-y-3">
+                {% for item in order.items.all %}
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-700">{{ item.quantity }} × {% if item.product %}{{ item.product.name }}{% else %}Removed product{% endif %}</span>
+                    <span class="font-medium">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="border-t mt-4 pt-4 flex justify-between font-bold text-lg">
+                <span>Total</span>
+                <span class="text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</span>
+            </div>
+            <div class="text-sm text-gray-500 mt-2">
+                Payment: {% if order.payment_method == 'cash' %}Cash on Delivery{% else %}MoMo on Delivery{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-600 text-center">
+        Need help with this order? <br>
+        <a href="tel:+256..." class="text-orange-600 font-medium mt-1 inline-block">Call the shop</a>
+    </div>
+</div>
+{% endblock %}

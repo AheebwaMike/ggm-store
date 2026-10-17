@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}My Orders - GGM Store{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">My Orders</h1>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-4 p-3 rounded-lg bg-blue-50 text-blue-700">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="space-y-3">
+        {% for order in orders %}
+        <a href="{% url 'customer_order_detail' order.id %}" class="block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition border border-gray-100">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <span class="font-bold text-gray-800">Order #{{ order.id }}</span>
+                    <span class="text-sm text-gray-500 ml-2">{{ order.created_at|date:"d M Y, H:i" }}</span>
+                </div>
+                {% if order.status == 'new' %}
+                    <span class="px-2 py-1 text-xs font-bold rounded bg-yellow-100 text-yellow-800">Pending Call</span>
+                {% elif order.status == 'confirmed' %}
+                    <span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800">Confirmed</span>
+                {% elif order.status == 'packed' %}
+                    <span class="px-2 py-1 text-xs font-bold rounded bg-indigo-100 text-indigo-800">Out for Delivery</span>
+                {% elif order.status == 'delivered' %}
+                    <span class="px-2 py-1 text-xs font-bold rounded bg-green-100 text-green-800">Delivered</span>
+                {% else %}
+                    <span class="px-2 py-1 text-xs font-bold rounded bg-red-100 text-red-800">Cancelled</span>
+                {% endif %}
+            </div>
+
+            <div class="flex justify-between items-end mt-4">
+                <div class="text-sm text-gray-600">
+                    {{ order.items.count }} item{{ order.items.count|pluralize }} ·
+                    {% if order.payment_method == 'cash' %}Cash on Delivery{% else %}MoMo on Delivery{% endif %}
+                </div>
+                <div class="font-bold text-orange-600">
+                    UGX {{ order.total_amount|floatformat:0 }}
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="bg-white rounded-xl shadow-sm p-8 text-center">
+            <p class="text-gray-500 mb-4">You haven't placed any orders yet.</p>
+            <a href="{% url 'home' %}" class="inline-block bg-orange-600 hover:bg-orange-700 text-white font-medium px-5 py-2 rounded-lg">
+                Start Shopping
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

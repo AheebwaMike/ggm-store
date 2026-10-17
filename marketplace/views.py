@@ -269,6 +269,46 @@ def order_success(request, order_id):
     return render(request, 'marketplace/order_success.html', {'order': order})
 
 
+def customer_orders(request):
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        messages.info(request, 'Please place an order to see your order history.')
+        return redirect('home')
+
+    try:
+        customer = Customer.objects.get(id=customer_id)
+    except (Customer.DoesNotExist, ValueError, TypeError):
+        request.session.pop('customer_id', None)
+        messages.info(request, 'Please place an order to see your order history.')
+        return redirect('home')
+
+    orders = Order.objects.filter(customer=customer).order_by('-created_at').prefetch_related('items')
+    return render(request, 'marketplace/customer_orders.html', {
+        'customer': customer,
+        'orders': orders,
+    })
+
+
+def customer_order_detail(request, order_id):
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('home')
+
+    try:
+        order = get_object_or_404(
+            Order.objects.prefetch_related('items__product'),
+            id=order_id,
+            customer_id=customer_id,
+        )
+    except (ValueError, TypeError):
+        request.session.pop('customer_id', None)
+        return redirect('home')
+
+    return render(request, 'marketplace/customer_order_detail.html', {
+        'order': order,
+    })
+
+
 @login_required
 def staff_orders(request):
     status = request.GET.get('status', 'new')
