@@ -25,6 +25,7 @@ class Product(models.Model):
     stock_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     manually_disabled = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True) # Toggle to hide out-of-stock or disabled items
+    image = models.ImageField(upload_to='products/', null=True, blank=True)
     
     def __str__(self):
         return f"{self.code} - {self.name}"

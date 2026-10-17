@@ -46,8 +46,17 @@
         <h2 class="mb-3 font-bold text-gray-900">Items</h2>
         <ul class="divide-y divide-gray-100">
             {% for item in order.items.all %}
-            <li class="flex justify-between gap-4 py-3">
-                <span class="text-gray-700">{{ item.quantity }} × {% if item.product %}{{ item.product.name }}{% else %}Removed product{% endif %}</span>
+            <li class="flex items-center justify-between gap-4 py-2">
+                <div class="flex min-w-0 items-center gap-2">
+                    <div class="w-8 h-8 rounded bg-orange-50 flex items-center justify-center overflow-hidden shrink-0">
+                        {% if item.product and item.product.image %}
+                            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                            {% include "marketplace/_product_image_placeholder.html" with product=item.product icon_size="h-5 w-5" %}
+                        {% endif %}
+                    </div>
+                    <span class="truncate text-gray-700">{{ item.quantity }} × {% if item.product %}{{ item.product.name }}{% else %}Removed product{% endif %}</span>
+                </div>
                 <span class="shrink-0 font-medium text-gray-900">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
             </li>
             {% endfor %}

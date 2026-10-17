@@ -1,5 +1,6 @@
 # marketplace/admin.py
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import (
     Apartment,
     Customer,
@@ -23,9 +24,27 @@ class UnitAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('code', 'name', 'group', 'unit', 'selling_price', 'stock_quantity', 'is_active')
+    list_display = (
+        'code',
+        'name',
+        'group',
+        'unit',
+        'selling_price',
+        'stock_quantity',
+        'is_active',
+        'image_preview',
+    )
     list_filter = ('is_active', 'group', 'unit')
     search_fields = ('code', 'name')
+    readonly_fields = ('image_preview',)
+
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />',
+                obj.image.url,
+            )
+        return "No Image"
 
 @admin.register(Apartment)
 class ApartmentAdmin(admin.ModelAdmin):
