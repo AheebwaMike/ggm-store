@@ -1,37 +1,52 @@
 {% extends "base.html" %}
 
-{% block title %}Order Received - GGM Store{% endblock %}
+{% block title %}Order Confirmed - GGM Store{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-white rounded-lg shadow-sm p-6 text-center space-y-4">
-    <div class="text-5xl" aria-hidden="true">✅</div>
-    <h1 class="text-2xl font-bold text-gray-900">Order Received!</h1>
-    <p class="text-gray-700">
-        Your order <span class="text-orange-600 font-bold">#{{ order.id }}</span> has been placed.
-    </p>
-    <p class="text-sm text-gray-600">
-        We will call you shortly at {{ order.customer.phone_number }} to confirm your order and delivery details.
-    </p>
+<div class="max-w-md mx-auto">
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-32 bg-orange-50 rounded-b-[50%] scale-150 -translate-y-16 z-0"></div>
 
-    <div class="bg-gray-50 rounded-lg p-4 text-left space-y-3">
-        {% for item in order.items.all %}
-            <div class="flex justify-between gap-3 text-sm">
-                <span>{{ item.quantity }} × {{ item.product.name }}</span>
-                <span class="shrink-0">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
+        <div class="relative z-10">
+            <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/20">
+                <i data-lucide="check" class="w-10 h-10 text-white"></i>
             </div>
-        {% endfor %}
-        <div class="border-t border-gray-200 pt-3 flex justify-between font-bold">
-            <span>Total</span>
-            <span>UGX {{ order.total_amount|floatformat:0 }}</span>
-        </div>
-        <p class="text-xs text-gray-600">
-            Payment: {% if order.payment_method == 'cash' %}Cash on Delivery{% else %}MoMo on Delivery{% endif %}
-        </p>
-    </div>
 
-    <a href="{% url 'home' %}"
-       class="block w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg">
-        Continue Shopping
-    </a>
+            <h1 class="text-2xl font-bold text-slate-800 mb-2">Order Received!</h1>
+            <p class="text-slate-600 mb-6">
+                Your order <span class="font-bold text-orange-600">#{{ order.id }}</span> has been placed.
+            </p>
+
+            <div class="bg-slate-50 rounded-2xl p-4 text-left border border-slate-100 mb-6">
+                <p class="text-sm text-slate-500 mb-3 flex items-center gap-2">
+                    <i data-lucide="phone-call" class="w-4 h-4 shrink-0"></i>
+                    We will call you shortly at <strong>{{ order.customer.phone_number }}</strong> to confirm.
+                </p>
+
+                <div class="border-t border-slate-200 pt-3 mt-3 space-y-2">
+                    {% for item in order.items.all %}
+                        <div class="flex justify-between gap-3 text-sm">
+                            <span class="text-slate-600">{{ item.quantity }} × {% if item.product %}{{ item.product.name }}{% else %}Removed product{% endif %}</span>
+                            <span class="text-slate-800 font-medium shrink-0">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="border-t border-slate-200 mt-3 pt-3 flex justify-between font-bold">
+                    <span class="text-slate-800">Total</span>
+                    <span class="text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</span>
+                </div>
+
+                <div class="text-xs text-center text-slate-500 mt-4 bg-white py-2 rounded-lg border border-slate-100">
+                    Paying via: <span class="font-bold text-slate-700">{% if order.payment_method == 'cash' %}Cash on Delivery{% else %}MoMo on Delivery{% endif %}</span>
+                </div>
+            </div>
+
+            <a href="{% url 'home' %}"
+               class="inline-flex items-center justify-center w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98]">
+                Continue Shopping
+            </a>
+        </div>
+    </div>
 </div>
 {% endblock %}

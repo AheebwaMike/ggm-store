@@ -3,9 +3,9 @@
 {% block title %}Your Cart - GGM Store{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">Your Cart</h1>
+<h1 class="text-2xl font-bold mb-6 text-slate-800">Your Cart</h1>
 
-<div id="cart-body">
+<div id="cart-body" hx-on::after-swap="if (window.lucide) lucide.createIcons()">
     {% include "marketplace/_cart_body.html" %}
 </div>
 {% endblock %}

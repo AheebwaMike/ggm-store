@@ -1,20 +1,22 @@
-<div id="product-{{ product.id }}" class="rounded-lg bg-white p-4 shadow-sm">
-    <div class="mb-3">
-        <h2 class="font-semibold text-gray-900">{{ product.name }}</h2>
-        <p class="text-sm text-gray-500">{{ product.code }} · UGX {{ product.selling_price|floatformat:0 }}</p>
+<div id="product-{{ product.id }}" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex items-center justify-between gap-4">
+    <div class="min-w-0">
+        <p class="font-bold text-slate-800 text-sm truncate">{{ product.name }}</p>
+        <p class="text-xs text-slate-400 mt-1">{{ product.code }} · UGX {{ product.selling_price|floatformat:0 }}</p>
     </div>
+
     <form method="post" action="{% url 'staff_toggle_stock' product.id %}"
           hx-post="{% url 'staff_toggle_stock' product.id %}"
-          hx-target="#product-{{ product.id }}" hx-swap="outerHTML">
+          hx-target="#product-{{ product.id }}"
+          hx-swap="outerHTML">
         {% csrf_token %}
-        {% if product.manually_disabled %}
-        <button type="submit" class="w-full rounded-lg bg-red-600 px-3 py-3 text-sm font-bold text-white hover:bg-red-700">
-            Out of Stock — Tap to Enable
+        <button type="submit"
+                class="min-h-11 px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shrink-0
+                {% if product.manually_disabled %}bg-red-50 text-red-600 border border-red-100 hover:bg-red-100{% else %}bg-green-50 text-green-700 border border-green-100 hover:bg-green-100{% endif %}">
+            {% if product.manually_disabled %}
+                <i data-lucide="eye-off" class="w-4 h-4"></i> Out of Stock
+            {% else %}
+                <i data-lucide="eye" class="w-4 h-4"></i> In Stock
+            {% endif %}
         </button>
-        {% else %}
-        <button type="submit" class="w-full rounded-lg bg-green-600 px-3 py-3 text-sm font-bold text-white hover:bg-green-700">
-            In Stock — Tap to Disable
-        </button>
-        {% endif %}
     </form>
 </div>

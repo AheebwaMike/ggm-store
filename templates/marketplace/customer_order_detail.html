@@ -4,52 +4,99 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <a href="{% url 'customer_orders' %}" class="text-sm text-orange-600 hover:underline mb-4 inline-block">&larr; Back to My Orders</a>
+    <a href="{% url 'customer_orders' %}" class="text-sm text-slate-500 hover:text-orange-600 font-medium mb-6 inline-flex items-center gap-1 transition-colors">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to My Orders
+    </a>
 
-    <div class="bg-white rounded-xl shadow-sm p-6 mb-4">
-        <div class="flex justify-between items-start mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">Order #{{ order.id }}</h1>
-                <p class="text-gray-500 text-sm mt-1">{{ order.created_at|date:"d M Y, H:i" }}</p>
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-4">
+        <h1 class="text-xl font-bold text-slate-800 mb-6 flex items-center justify-between">
+            <span>Order #{{ order.id }}</span>
+            <span class="text-sm font-medium text-slate-400">{{ order.created_at|date:"d M Y, H:i" }}</span>
+        </h1>
+
+        {% if order.status == 'cancelled' %}
+            <div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
+                <i data-lucide="x-circle" class="w-8 h-8 text-red-500 mx-auto mb-2"></i>
+                <p class="text-red-700 font-bold">Order Cancelled</p>
+                <p class="text-red-500 text-sm mt-1">This order is no longer active.</p>
             </div>
+        {% else %}
+            <div class="relative flex justify-between items-center w-full mb-8">
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 z-0 rounded-full"></div>
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-orange-500 z-0 rounded-full transition-all duration-500"
+                     style="width: {% if order.status == 'new' %}0%{% elif order.status == 'confirmed' %}33%{% elif order.status == 'packed' %}66%{% elif order.status == 'delivered' %}100%{% endif %};"></div>
 
-            {% if order.status == 'new' %}
-                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-yellow-100 text-yellow-800">Pending Call</span>
-            {% elif order.status == 'confirmed' %}
-                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-blue-100 text-blue-800">Confirmed</span>
-            {% elif order.status == 'packed' %}
-                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-indigo-100 text-indigo-800">Out for Delivery</span>
-            {% elif order.status == 'delivered' %}
-                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-green-100 text-green-800">Delivered</span>
-            {% else %}
-                <span class="px-3 py-1 text-sm font-bold rounded-lg bg-red-100 text-red-800">Cancelled</span>
-            {% endif %}
-        </div>
-
-        <div class="border-t pt-4">
-            <h2 class="font-bold text-gray-800 mb-3">Items</h2>
-            <div class="space-y-3">
-                {% for item in order.items.all %}
-                <div class="flex justify-between text-sm">
-                    <span class="text-gray-700">{{ item.quantity }} × {% if item.product %}{{ item.product.name }}{% else %}Removed product{% endif %}</span>
-                    <span class="font-medium">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-sm {% if order.status == 'new' or order.status == 'confirmed' or order.status == 'packed' or order.status == 'delivered' %}bg-orange-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %}">
+                        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold mt-2 {% if order.status == 'new' or order.status == 'confirmed' or order.status == 'packed' or order.status == 'delivered' %}text-slate-800{% else %}text-slate-400{% endif %}">Placed</span>
                 </div>
-                {% endfor %}
+
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-sm {% if order.status == 'confirmed' or order.status == 'packed' or order.status == 'delivered' %}bg-orange-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %}">
+                        <i data-lucide="phone" class="w-4 h-4"></i>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold mt-2 {% if order.status == 'confirmed' or order.status == 'packed' or order.status == 'delivered' %}text-slate-800{% else %}text-slate-400{% endif %}">Confirmed</span>
+                </div>
+
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-sm {% if order.status == 'packed' or order.status == 'delivered' %}bg-orange-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %}">
+                        <i data-lucide="bike" class="w-4 h-4"></i>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold mt-2 {% if order.status == 'packed' or order.status == 'delivered' %}text-slate-800{% else %}text-slate-400{% endif %}">On the way</span>
+                </div>
+
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-sm {% if order.status == 'delivered' %}bg-green-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %}">
+                        <i data-lucide="home" class="w-4 h-4"></i>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold mt-2 {% if order.status == 'delivered' %}text-slate-800{% else %}text-slate-400{% endif %}">Delivered</span>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="p-5">
+                <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i data-lucide="receipt" class="w-4 h-4 text-slate-400"></i> Items
+                </h2>
+                <div class="space-y-3">
+                    {% for item in order.items.all %}
+                    <div class="flex justify-between text-sm items-start">
+                        <div class="flex gap-2">
+                            <span class="text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded">{{ item.quantity }}x</span>
+                            <span class="text-slate-700 font-medium">{% if item.product %}{{ item.product.name }}{% else %}Removed product{% endif %}</span>
+                        </div>
+                        <span class="font-bold text-slate-800">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
 
-            <div class="border-t mt-4 pt-4 flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span class="text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</span>
+            <div class="relative h-4 border-t border-dashed border-slate-200">
+                <div class="absolute -left-2 -top-2 w-4 h-4 bg-white rounded-full"></div>
+                <div class="absolute -right-2 -top-2 w-4 h-4 bg-white rounded-full"></div>
             </div>
-            <div class="text-sm text-gray-500 mt-2">
-                Payment: {% if order.payment_method == 'cash' %}Cash on Delivery{% else %}MoMo on Delivery{% endif %}
+
+            <div class="p-5 bg-white">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-slate-500 font-medium text-sm">Payment Method</span>
+                    <span class="font-bold text-slate-800 text-sm">{{ order.get_payment_method_display }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-lg font-bold text-slate-800">Total</span>
+                    <span class="text-2xl font-bold text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-600 text-center">
-        Need help with this order? <br>
-        <a href="tel:+256..." class="text-orange-600 font-medium mt-1 inline-block">Call the shop</a>
+    <div class="bg-orange-50 rounded-2xl p-5 text-center border border-orange-100">
+        <p class="text-sm text-orange-800 font-medium mb-2">Need help with this order?</p>
+        <a href="tel:+256700000000" class="inline-flex items-center gap-2 bg-white text-orange-600 font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
+            <i data-lucide="phone-call" class="w-4 h-4"></i> Call the Shop
+        </a>
     </div>
 </div>
 {% endblock %}

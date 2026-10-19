@@ -3,87 +3,112 @@
 {% block title %}Checkout - GGM Store{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">Checkout</h1>
+<div class="max-w-xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6 text-slate-800">Checkout</h1>
 
-<div class="bg-white rounded-lg shadow-sm p-5 space-y-4">
     {% if messages %}
-        <div class="space-y-2">
-            {% for message in messages %}
-                <div class="{% if message.level_tag == 'error' %}bg-red-50 text-red-700{% else %}bg-yellow-50 text-yellow-800{% endif %} rounded-lg p-3 text-sm">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
+        {% for message in messages %}
+            <div class="mb-4 p-3 rounded-xl {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-100{% else %}bg-orange-50 text-orange-700 border border-orange-100{% endif %} text-sm font-medium">
+                {{ message }}
+            </div>
+        {% endfor %}
     {% endif %}
 
-    <form method="post" class="space-y-4">
+    <form method="post" class="space-y-6">
         {% csrf_token %}
 
-        <div>
-            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
-            <input id="phone" name="phone" type="tel" required placeholder="07XXXXXXXX"
-                   value="{{ form_data.phone }}"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
-            <p class="text-xs text-gray-500 mt-1">We will call this number to confirm your order.</p>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+            <h2 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-2 mb-4">Delivery Details</h2>
+
+            <div>
+                <label for="checkout-phone" class="block text-sm font-medium text-slate-700 mb-1.5">Phone Number <span class="text-orange-500">*</span></label>
+                <input id="checkout-phone" type="tel" name="phone" required
+                       value="{{ form_data.phone|default:'' }}"
+                       placeholder="07XXXXXXXX"
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800 font-medium">
+                <p class="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                    <i data-lucide="phone" class="w-3 h-3"></i> We will call this number to confirm.
+                </p>
+            </div>
+
+            <div>
+                <label for="checkout-name" class="block text-sm font-medium text-slate-700 mb-1.5">Your Name</label>
+                <input id="checkout-name" type="text" name="name"
+                       value="{{ form_data.name|default:'' }}"
+                       placeholder="Optional, but helps our driver"
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="checkout-apartment" class="block text-sm font-medium text-slate-700 mb-1.5">Apartment <span class="text-orange-500">*</span></label>
+                    <select id="checkout-apartment" name="apartment" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800">
+                        <option value="">Select...</option>
+                        {% for apt in apartments %}
+                            <option value="{{ apt.id }}" {% if form_data.apartment == apt.id|stringformat:"s" %}selected{% endif %}>
+                                {{ apt.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="checkout-unit" class="block text-sm font-medium text-slate-700 mb-1.5">Unit / House No.</label>
+                    <input id="checkout-unit" type="text" name="unit_number"
+                           value="{{ form_data.unit_number|default:'' }}"
+                           placeholder="e.g., Apt 4B"
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800">
+                </div>
+            </div>
         </div>
 
-        <div>
-            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name (optional)</label>
-            <input id="name" name="name" type="text" value="{{ form_data.name }}"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
-        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <h2 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-2 mb-4">Payment Method</h2>
 
-        <div>
-            <label for="apartment" class="block text-sm font-medium text-gray-700 mb-1">Apartment</label>
-            <select id="apartment" name="apartment" required
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                <option value="">Select your apartment</option>
-                {% for apt in apartments %}
-                    <option value="{{ apt.id }}" {% if form_data.apartment == apt.id|stringformat:"s" %}selected{% endif %}>{{ apt.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label for="unit_number" class="block text-sm font-medium text-gray-700 mb-1">Unit number (optional)</label>
-            <input id="unit_number" name="unit_number" type="text" placeholder="e.g., Apt 4B"
-                   value="{{ form_data.unit_number }}"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
-        </div>
-
-        <fieldset>
-            <legend class="block text-sm font-medium text-gray-700 mb-1">Payment method</legend>
-            <div class="flex gap-3">
-                <label class="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2">
+            <div class="grid grid-cols-2 gap-3">
+                <label class="relative flex flex-col items-center justify-center p-4 border-2 border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all [&:has(input:checked)]:border-orange-500 [&:has(input:checked)]:bg-orange-50">
                     <input type="radio" name="payment_method" value="cash"
-                           {% if not form_data.payment_method or form_data.payment_method == 'cash' %}checked{% endif %}>
-                    <span class="text-sm">Cash on Delivery</span>
+                           {% if not form_data.payment_method or form_data.payment_method == 'cash' %}checked{% endif %}
+                           class="sr-only">
+                    <i data-lucide="banknote" class="w-8 h-8 text-slate-700 mb-2"></i>
+                    <span class="text-sm font-bold text-slate-800">Cash</span>
+                    <span class="text-[11px] text-slate-500 text-center mt-1">Pay on delivery</span>
                 </label>
-                <label class="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2">
-                    <input type="radio" name="payment_method" value="momo"
-                           {% if form_data.payment_method == 'momo' %}checked{% endif %}>
-                    <span class="text-sm">MoMo on Delivery</span>
-                </label>
-            </div>
-        </fieldset>
 
-        <div class="bg-gray-50 rounded-lg p-4 space-y-2">
-            <div class="flex justify-between text-sm text-gray-600">
-                <span>Items ({{ item_count }})</span>
-                <span>UGX {{ subtotal|floatformat:0 }}</span>
+                <label class="relative flex flex-col items-center justify-center p-4 border-2 border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all [&:has(input:checked)]:border-orange-500 [&:has(input:checked)]:bg-orange-50">
+                    <input type="radio" name="payment_method" value="momo"
+                           {% if form_data.payment_method == 'momo' %}checked{% endif %}
+                           class="sr-only">
+                    <i data-lucide="smartphone" class="w-8 h-8 text-slate-700 mb-2"></i>
+                    <span class="text-sm font-bold text-slate-800">MoMo</span>
+                    <span class="text-[11px] text-slate-500 text-center mt-1">Mobile Money</span>
+                </label>
             </div>
-            <div class="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
-                <span>Total</span>
-                <span>UGX {{ subtotal|floatformat:0 }}</span>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <h2 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-2 mb-4">Order Summary</h2>
+
+            <div class="space-y-2 mb-4">
+                {% for item in items %}
+                <div class="flex justify-between text-sm gap-3">
+                    <span class="text-slate-600">{{ item.quantity }} × {{ item.product.name }}</span>
+                    <span class="font-medium text-slate-800 shrink-0">UGX {{ item.line_total|floatformat:0 }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="border-t border-slate-100 pt-3 flex justify-between items-center">
+                <span class="font-bold text-slate-800">Total</span>
+                <span class="text-xl font-bold text-orange-600">UGX {{ subtotal|floatformat:0 }}</span>
             </div>
         </div>
 
         <button type="submit"
-                class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg">
+                class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-lg py-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex justify-center items-center gap-2">
             Place Order
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
         </button>
     </form>
-
-    <p class="text-xs text-center text-gray-500">We will call you shortly to confirm your order and delivery.</p>
 </div>
 {% endblock %}

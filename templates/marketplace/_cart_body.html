@@ -1,54 +1,73 @@
 {% if items %}
     <div class="space-y-3">
         {% for item in items %}
-            <div class="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between gap-3">
-                <div class="flex-1 min-w-0">
-                    <p class="font-medium text-gray-800 text-sm">{{ item.product.name }}</p>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                        UGX {{ item.product.selling_price|floatformat:0 }} × {{ item.quantity }}
-                    </p>
-                    <p class="text-orange-600 font-bold text-sm mt-1">
-                        UGX {{ item.line_total|floatformat:0 }}
-                    </p>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3">
+                <div class="w-16 h-16 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden border border-slate-100">
+                    {% if item.product.image %}
+                        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover">
+                    {% else %}
+                        <i data-lucide="shopping-basket" class="w-8 h-8 text-orange-200"></i>
+                    {% endif %}
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    <button hx-post="{% url 'cart_update' item.product.id %}"
-                            hx-vals='{"action":"dec"}'
-                            hx-target="#cart-body" hx-swap="innerHTML"
-                            class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 font-bold text-gray-700">−</button>
 
-                    <span class="w-6 text-center font-medium">{{ item.quantity }}</span>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-slate-800 text-sm truncate">{{ item.product.name }}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">UGX {{ item.product.selling_price|floatformat:0 }} × {{ item.quantity }}</p>
+                    <p class="text-orange-600 font-bold text-sm mt-1">UGX {{ item.line_total|floatformat:0 }}</p>
+                </div>
 
-                    <button hx-post="{% url 'cart_update' item.product.id %}"
-                            hx-vals='{"action":"inc"}'
-                            hx-target="#cart-body" hx-swap="innerHTML"
-                            class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 font-bold text-gray-700">+</button>
-
+                <div class="flex flex-col items-end gap-2 shrink-0">
                     <button hx-post="{% url 'cart_update' item.product.id %}"
                             hx-vals='{"action":"remove"}'
                             hx-target="#cart-body" hx-swap="innerHTML"
-                            class="ml-2 text-red-500 hover:text-red-700 text-sm">Remove</button>
+                            class="text-slate-400 hover:text-red-500 transition-colors p-1"
+                            title="Remove item" aria-label="Remove {{ item.product.name }} from cart">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+
+                    <div class="flex items-center bg-slate-50 rounded-full border border-slate-200 p-1">
+                        <button hx-post="{% url 'cart_update' item.product.id %}"
+                                hx-vals='{"action":"dec"}'
+                                hx-target="#cart-body" hx-swap="innerHTML"
+                                class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white hover:shadow-sm text-slate-600 transition-all active:scale-95"
+                                aria-label="Decrease {{ item.product.name }} quantity">
+                            <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <span class="w-6 text-center font-medium text-sm text-slate-800">{{ item.quantity }}</span>
+                        <button hx-post="{% url 'cart_update' item.product.id %}"
+                                hx-vals='{"action":"inc"}'
+                                hx-target="#cart-body" hx-swap="innerHTML"
+                                class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white hover:shadow-sm text-slate-600 transition-all active:scale-95"
+                                aria-label="Increase {{ item.product.name }} quantity">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         {% endfor %}
     </div>
 
-    <div class="mt-6 bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
-        <span class="text-gray-600 font-medium">Subtotal</span>
-        <span class="text-xl font-bold text-gray-900">UGX {{ subtotal|floatformat:0 }}</span>
-    </div>
-
-    <div class="mt-4">
+    <div class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sticky bottom-20 md:bottom-6">
+        <div class="flex justify-between items-center mb-4">
+            <span class="text-slate-500 font-medium">Subtotal</span>
+            <span class="text-2xl font-bold text-slate-800">UGX {{ subtotal|floatformat:0 }}</span>
+        </div>
         <a href="{% url 'checkout' %}"
-           class="block w-full text-center bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg">
+           class="flex items-center justify-center w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-sm transition-all active:scale-[0.98]">
             Proceed to Checkout
+            <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
         </a>
     </div>
+
 {% else %}
-    <div class="bg-white rounded-lg shadow-sm p-8 text-center">
-        <p class="text-gray-500 mb-4">Your cart is empty.</p>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center flex flex-col items-center">
+        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <i data-lucide="shopping-cart" class="w-10 h-10 text-slate-300"></i>
+        </div>
+        <p class="text-slate-600 font-medium text-lg mb-1">Your cart is empty</p>
+        <p class="text-slate-400 text-sm mb-6">Looks like you haven't added anything yet.</p>
         <a href="{% url 'home' %}"
-           class="inline-block bg-orange-600 hover:bg-orange-700 text-white font-medium px-5 py-2 rounded-lg">
+           class="inline-flex items-center bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold px-6 py-2.5 rounded-xl transition-colors">
             Browse Products
         </a>
     </div>

@@ -1,31 +1,48 @@
-{% for order in orders %}
-<a href="{% url 'staff_order_detail' order.id %}"
-   class="block rounded-lg bg-white p-4 shadow-sm hover:shadow-md">
-    <div class="flex items-start justify-between gap-3">
-        <div>
-            <p class="font-bold text-gray-900">#{{ order.id }} <span class="font-normal text-sm text-gray-500">{{ order.created_at|date:"H:i" }}</span></p>
-            <p class="mt-1 font-medium text-gray-800">{% if order.customer.name %}{{ order.customer.name }}{% else %}{{ order.customer.phone_number }}{% endif %}</p>
-            <p class="text-sm text-gray-500">
-                {% if order.customer.apartment %}{{ order.customer.apartment.name }}{% endif %}
-                {% if order.customer.unit_number %}{% if order.customer.apartment %} · {% endif %}{{ order.customer.unit_number }}{% endif %}
-            </p>
-            <p class="mt-2 font-semibold text-gray-900">UGX {{ order.total_amount|floatformat:0 }}</p>
-            <span class="mt-2 inline-block rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
-                {% if order.payment_method == 'momo' %}MoMo{% else %}Cash{% endif %}
+<div class="space-y-3">
+    {% for order in orders %}
+    <a href="{% url 'staff_order_detail' order.id %}" class="block bg-white rounded-2xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition-shadow active:scale-[0.99] relative overflow-hidden">
+        <div class="absolute left-0 top-0 bottom-0 w-1 {% if order.status == 'new' %}bg-yellow-400{% elif order.status == 'confirmed' %}bg-blue-500{% elif order.status == 'packed' %}bg-indigo-500{% elif order.status == 'delivered' %}bg-green-500{% else %}bg-red-500{% endif %}"></div>
+
+        <div class="flex justify-between items-start mb-2">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-800 text-lg">#{{ order.id }}</span>
+                <span class="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded">{{ order.created_at|date:"H:i" }}</span>
+            </div>
+            <div class="font-bold text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</div>
+        </div>
+
+        <div class="text-sm text-slate-600 font-medium truncate flex items-center gap-1.5 mb-1">
+            <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+            {{ order.customer.name|default:order.customer.phone_number }}
+        </div>
+
+        {% if order.customer.apartment %}
+        <div class="text-sm text-slate-500 truncate flex items-center gap-1.5">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
+            {{ order.customer.apartment.name }}{% if order.customer.unit_number %} / {{ order.customer.unit_number }}{% endif %}
+        </div>
+        {% endif %}
+
+        <div class="mt-3 flex items-center gap-2">
+            <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md bg-slate-100 text-slate-600">
+                {% if order.payment_method == 'cash' %}<i data-lucide="banknote" class="w-3 h-3"></i> Cash{% else %}<i data-lucide="smartphone" class="w-3 h-3"></i> MoMo{% endif %}
+            </span>
+            <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md
+                {% if order.status == 'new' %}bg-yellow-100 text-yellow-800
+                {% elif order.status == 'confirmed' %}bg-blue-100 text-blue-800
+                {% elif order.status == 'packed' %}bg-indigo-100 text-indigo-800
+                {% elif order.status == 'delivered' %}bg-green-100 text-green-800
+                {% else %}bg-red-100 text-red-800{% endif %}">
+                {{ order.get_status_display }}
             </span>
         </div>
-        <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold
-            {% if order.status == 'new' %}bg-orange-100 text-orange-800
-            {% elif order.status == 'confirmed' %}bg-blue-100 text-blue-800
-            {% elif order.status == 'packed' %}bg-purple-100 text-purple-800
-            {% elif order.status == 'delivered' %}bg-green-100 text-green-800
-            {% else %}bg-red-100 text-red-800{% endif %}">
-            {{ order.get_status_display }}
-        </span>
+    </a>
+    {% empty %}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center flex flex-col items-center">
+        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+            <i data-lucide="inbox" class="w-8 h-8 text-slate-300"></i>
+        </div>
+        <p class="text-slate-500 font-medium">No orders in this tab.</p>
     </div>
-</a>
-{% empty %}
-<div class="rounded-lg bg-white px-4 py-10 text-center text-gray-500 shadow-sm">
-    No orders to show.
+    {% endfor %}
 </div>
-{% endfor %}
