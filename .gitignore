@@ -12,6 +12,7 @@ wheels/
 
 # Local environment and deployment artifacts
 .env
+.env.prod
 db.sqlite3
 staticfiles/
 .vscode/
