@@ -10,6 +10,7 @@ urlpatterns = [
     path('cart/add/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
     path('cart/update/<int:product_id>/', views.cart_update, name='cart_update'),
     path('checkout/', views.checkout, name='checkout'),
+    path('checkout/summary/', views.checkout_summary_partial, name='checkout_summary_partial'),
     path('order/success/<int:order_id>/', views.order_success, name='order_success'),
     path('my-orders/', views.customer_orders, name='customer_orders'),
     path('my-orders/<int:order_id>/', views.customer_order_detail, name='customer_order_detail'),
@@ -20,5 +21,6 @@ urlpatterns = [
     path('staff/stock/', views.staff_stock, name='staff_stock'),
     path('staff/stock/<int:product_id>/toggle/', views.staff_toggle_stock, name='staff_toggle_stock'),
     path('staff/manifest/', views.staff_manifest, name='staff_manifest'),
+    path('staff/settings/', views.staff_settings, name='staff_settings'),
     path('owner/', views.owner_dashboard, name='owner_dashboard'),
 ]

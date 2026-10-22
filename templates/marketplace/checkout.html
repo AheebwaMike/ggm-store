@@ -43,6 +43,10 @@
                 <div>
                     <label for="checkout-apartment" class="block text-sm font-medium text-slate-700 mb-1.5">Apartment <span class="text-orange-500">*</span></label>
                     <select id="checkout-apartment" name="apartment" required
+                            hx-get="{% url 'checkout_summary_partial' %}"
+                            hx-target="#checkout-summary"
+                            hx-trigger="change"
+                            hx-include="[name='apartment']"
                             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800">
                         <option value="">Select...</option>
                         {% for apt in apartments %}
@@ -88,19 +92,8 @@
 
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
             <h2 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-2 mb-4">Order Summary</h2>
-
-            <div class="space-y-2 mb-4">
-                {% for item in items %}
-                <div class="flex justify-between text-sm gap-3">
-                    <span class="text-slate-600">{{ item.quantity }} × {{ item.product.name }}</span>
-                    <span class="font-medium text-slate-800 shrink-0">UGX {{ item.line_total|floatformat:0 }}</span>
-                </div>
-                {% endfor %}
-            </div>
-
-            <div class="border-t border-slate-100 pt-3 flex justify-between items-center">
-                <span class="font-bold text-slate-800">Total</span>
-                <span class="text-xl font-bold text-orange-600">UGX {{ subtotal|floatformat:0 }}</span>
+            <div id="checkout-summary" hx-on::after-swap="if (window.lucide) lucide.createIcons()">
+                {% include "marketplace/_checkout_summary.html" %}
             </div>
         </div>
 

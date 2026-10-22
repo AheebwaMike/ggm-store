@@ -9,6 +9,7 @@ from .models import (
     OrderItem,
     Product,
     ProductGroup,
+    StoreConfig,
     Unit,
 )
 
@@ -48,8 +49,15 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Apartment)
 class ApartmentAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ('name', 'delivery_fee_override')
     search_fields = ('name',)
+
+
+@admin.register(StoreConfig)
+class StoreConfigAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return not StoreConfig.objects.exists()
+
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -63,7 +71,7 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'customer', 'status', 'payment_method', 'total_amount', 'created_at')
+    list_display = ('id', 'customer', 'status', 'payment_method', 'total_amount', 'delivery_fee', 'created_at')
     list_filter = ('status', 'payment_method', 'created_at')
     search_fields = ('id', 'customer__name', 'customer__phone_number')
     inlines = [OrderItemInline]

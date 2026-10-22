@@ -47,13 +47,33 @@
         {% endfor %}
     </div>
 
+    {% if amount_for_free_delivery > 0 %}
+    <div class="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-4 mt-6">
+        <p class="text-xs font-medium text-orange-800 mb-2">Spend <strong>UGX {{ amount_for_free_delivery|floatformat:0 }}</strong> more for FREE delivery!</p>
+        <div class="w-full bg-orange-200 rounded-full h-2">
+            <div class="bg-orange-500 h-2 rounded-full" style="width: {% widthratio subtotal config.free_delivery_threshold 100 %}%"></div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sticky bottom-20 md:bottom-6">
-        <div class="flex justify-between items-center mb-4">
-            <span class="text-slate-500 font-medium">Subtotal</span>
-            <span class="text-2xl font-bold text-slate-800">UGX {{ subtotal|floatformat:0 }}</span>
+        <div class="space-y-2 mb-4 text-sm">
+            <div class="flex justify-between text-slate-500">
+                <span>Subtotal</span>
+                <span>UGX {{ subtotal|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-slate-500">
+                <span>Delivery Fee</span>
+                <span>{% if delivery_fee == 0 %}<span class="text-green-600 font-bold">FREE</span>{% else %}UGX {{ delivery_fee|floatformat:0 }}{% endif %}</span>
+            </div>
+            <div class="border-t border-slate-100 pt-2 mt-2 flex justify-between items-center">
+                <span class="font-bold text-slate-800 text-base">Total</span>
+                <span class="text-2xl font-bold text-orange-600">UGX {{ grand_total|floatformat:0 }}</span>
+            </div>
         </div>
         <a href="{% url 'checkout' %}"
-           class="flex items-center justify-center w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-sm transition-all active:scale-[0.98]">
+           class="flex items-center justify-center w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-sm transition-all active:scale-[0.98] {% if subtotal < config.minimum_order_value %}opacity-50 cursor-not-allowed{% endif %}"
+           {% if subtotal < config.minimum_order_value %}aria-disabled="true" title="Add items to meet the minimum order value"{% endif %}>
             Proceed to Checkout
             <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
         </a>

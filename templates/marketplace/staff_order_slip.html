@@ -91,6 +91,10 @@
         </div>
         <hr>
 
+        <div class="row">
+            <span>DELIVERY FEE</span>
+            <span>{% if order.delivery_fee == 0 %}FREE{% else %}UGX {{ order.delivery_fee|floatformat:0 }}{% endif %}</span>
+        </div>
         <div class="row total">
             <span>TOTAL</span>
             <span>UGX {{ order.total_amount|floatformat:0 }}</span>

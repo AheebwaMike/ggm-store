@@ -1,5 +1,8 @@
 import json
+from decimal import Decimal
 
+from django import forms
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, get_object_or_404, redirect
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
@@ -19,6 +22,7 @@ from .models import (
     OrderItem,
     Product,
     ProductGroup,
+    StoreConfig,
 )
 
 
@@ -125,11 +129,25 @@ def add_to_cart(request, product_id):
 
 # ---------- Cart page + updates ----------
 
-def _cart_details(request):
-    """Build enriched cart data for templates: list of items + subtotal."""
+def _get_store_config():
+    config, _ = StoreConfig.objects.get_or_create(pk=1)
+    return config
+
+
+def _calculate_delivery_fee(subtotal, apartment=None, config=None):
+    config = config or _get_store_config()
+    if subtotal >= config.free_delivery_threshold:
+        return Decimal('0.00')
+    if apartment and apartment.delivery_fee_override is not None:
+        return apartment.delivery_fee_override
+    return config.delivery_fee
+
+
+def _cart_details(request, apartment_id=None):
+    """Build cart items and calculated order totals for the selected apartment."""
     cart = _get_cart(request)
     items = []
-    subtotal = 0
+    subtotal = Decimal('0.00')
     for pid_str, qty in cart.items():
         try:
             product = Product.objects.get(id=int(pid_str), is_active=True)
@@ -142,12 +160,39 @@ def _cart_details(request):
             'quantity': int(qty),
             'line_total': line_total,
         })
-    return items, subtotal
+    config = _get_store_config()
+    apartment = None
+    if apartment_id:
+        try:
+            apartment = Apartment.objects.filter(pk=apartment_id).first()
+        except (ValueError, TypeError):
+            apartment = None
+    delivery_fee = _calculate_delivery_fee(subtotal, apartment, config)
+    grand_total = subtotal + delivery_fee
+    amount_for_free_delivery = max(
+        config.free_delivery_threshold - subtotal,
+        Decimal('0.00'),
+    ) if subtotal > 0 else Decimal('0.00')
+    return (
+        items,
+        subtotal,
+        delivery_fee,
+        grand_total,
+        amount_for_free_delivery,
+        config,
+    )
 
 
 def cart_view(request):
-    items, subtotal = _cart_details(request)
-    return render(request, 'marketplace/cart.html', {'items': items, 'subtotal': subtotal})
+    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(request)
+    return render(request, 'marketplace/cart.html', {
+        'items': items,
+        'subtotal': subtotal,
+        'delivery_fee': delivery_fee,
+        'grand_total': grand_total,
+        'amount_for_free_delivery': amount_for_free_delivery,
+        'config': config,
+    })
 
 
 @require_POST
@@ -168,17 +213,34 @@ def cart_update(request, product_id):
 
     _save_cart(request, cart)
 
-    items, subtotal = _cart_details(request)
-    response = render(request, 'marketplace/_cart_body.html', {'items': items, 'subtotal': subtotal})
+    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(request)
+    response = render(request, 'marketplace/_cart_body.html', {
+        'items': items,
+        'subtotal': subtotal,
+        'delivery_fee': delivery_fee,
+        'grand_total': grand_total,
+        'amount_for_free_delivery': amount_for_free_delivery,
+        'config': config,
+    })
     response['HX-Trigger'] = 'cartUpdated'
     return response
 
 
 def checkout(request):
-    items, subtotal = _cart_details(request)
+    apartment_id = request.POST.get('apartment') or request.GET.get('apartment')
+    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(
+        request,
+        apartment_id,
+    )
     if not items:
         messages.warning(request, 'Your cart is empty.')
         return redirect('home')
+    if subtotal < config.minimum_order_value:
+        messages.error(
+            request,
+            f'Minimum order value is UGX {config.minimum_order_value:,.0f}. Please add more items.',
+        )
+        return redirect('cart_view')
 
     apartments = Apartment.objects.all().order_by('name')
     saved_customer = None
@@ -213,6 +275,10 @@ def checkout(request):
             return render(request, 'marketplace/checkout.html', {
                 'items': items,
                 'subtotal': subtotal,
+                'delivery_fee': delivery_fee,
+                'grand_total': grand_total,
+                'amount_for_free_delivery': amount_for_free_delivery,
+                'config': config,
                 'apartments': apartments,
                 'form_data': request.POST,
                 'item_count': sum(item['quantity'] for item in items),
@@ -232,7 +298,8 @@ def checkout(request):
                 customer=customer,
                 status='new',
                 payment_method=payment_method,
-                total_amount=subtotal,
+                total_amount=grand_total,
+                delivery_fee=delivery_fee,
             )
             for item in items:
                 OrderItem.objects.create(
@@ -255,14 +322,73 @@ def checkout(request):
             'apartment': str(saved_customer.apartment.id) if saved_customer.apartment else '',
             'unit_number': saved_customer.unit_number,
         }
+        if saved_customer.apartment:
+            apartment_id = str(saved_customer.apartment_id)
+            items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(
+                request,
+                apartment_id,
+            )
 
     return render(request, 'marketplace/checkout.html', {
         'items': items,
         'subtotal': subtotal,
+        'delivery_fee': delivery_fee,
+        'grand_total': grand_total,
+        'amount_for_free_delivery': amount_for_free_delivery,
+        'config': config,
         'apartments': apartments,
         'form_data': form_data,
         'item_count': sum(item['quantity'] for item in items),
     })
+
+
+def checkout_summary_partial(request):
+    apartment_id = request.GET.get('apartment')
+    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, _config = _cart_details(
+        request,
+        apartment_id,
+    )
+    return render(request, 'marketplace/_checkout_summary.html', {
+        'items': items,
+        'subtotal': subtotal,
+        'delivery_fee': delivery_fee,
+        'grand_total': grand_total,
+        'amount_for_free_delivery': amount_for_free_delivery,
+    })
+
+
+@login_required
+def staff_settings(request):
+    config = _get_store_config()
+
+    if request.method == 'POST':
+        try:
+            amount_field = forms.DecimalField(
+                max_digits=10,
+                decimal_places=2,
+                min_value=0,
+            )
+            values = {
+                field: amount_field.clean(request.POST.get(field, ''))
+                for field in (
+                    'delivery_fee',
+                    'free_delivery_threshold',
+                    'minimum_order_value',
+                )
+            }
+        except ValidationError:
+            messages.error(
+                request,
+                'Enter valid non-negative amounts with no more than two decimal places.',
+            )
+        else:
+            for field, value in values.items():
+                setattr(config, field, value)
+            config.save()
+            messages.success(request, 'Settings updated successfully.')
+            return redirect('staff_settings')
+
+    return render(request, 'marketplace/staff_settings.html', {'config': config})
 
 
 def order_success(request, order_id):

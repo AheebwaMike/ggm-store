@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
-from .models import Apartment, Customer, Order, OrderItem, Product
+from .models import Apartment, Customer, Order, OrderItem, Product, StoreConfig
 
 
 class OwnerDashboardTests(TestCase):
@@ -201,3 +201,105 @@ class StaffManifestTests(TestCase):
         staff_response = self.client.get('/staff/')
         self.assertContains(staff_response, 'href="/staff/manifest/"')
         self.assertContains(staff_response, 'target="_blank"')
+
+
+class DeliveryPricingTests(TestCase):
+    def setUp(self):
+        self.product = Product.objects.create(
+            code='PRICE001',
+            name='Test Product',
+            selling_price=Decimal('15000.00'),
+        )
+        self.apartment = Apartment.objects.create(name='Test Apartment')
+        self.config = StoreConfig.objects.create()
+        session = self.client.session
+        session['cart'] = {str(self.product.pk): 1}
+        session.save()
+
+    def test_defaults_and_cart_free_delivery_progress(self):
+        self.assertEqual(self.config.delivery_fee, Decimal('2000.00'))
+        self.assertEqual(self.config.free_delivery_threshold, Decimal('35000.00'))
+        self.assertEqual(self.config.minimum_order_value, Decimal('0.00'))
+
+        self.config.free_delivery_threshold = Decimal('20000.00')
+        self.config.save()
+        response = self.client.get('/cart/')
+
+        self.assertContains(response, 'Spend <strong>UGX 5000</strong> more')
+        self.assertContains(response, 'UGX 17000')
+
+    def test_apartment_override_and_free_delivery_threshold(self):
+        self.apartment.delivery_fee_override = Decimal('0.00')
+        self.apartment.save()
+        response = self.client.get(
+            f'/checkout/summary/?apartment={self.apartment.pk}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'FREE')
+        self.assertContains(response, 'UGX 15000')
+
+        self.config.free_delivery_threshold = Decimal('15000.00')
+        self.config.save()
+        response = self.client.get(
+            f'/checkout/summary/?apartment={self.apartment.pk}',
+        )
+        self.assertContains(response, 'FREE')
+
+    def test_checkout_persists_delivery_fee_and_grand_total(self):
+        response = self.client.post('/checkout/', {
+            'phone': '0701234567',
+            'name': 'Test Buyer',
+            'apartment': str(self.apartment.pk),
+            'unit_number': '4A',
+            'payment_method': 'cash',
+        })
+
+        order = Order.objects.get()
+        self.assertRedirects(response, f'/order/success/{order.pk}/')
+        self.assertEqual(order.delivery_fee, Decimal('2000.00'))
+        self.assertEqual(order.total_amount, Decimal('17000.00'))
+        success_response = self.client.get(f'/order/success/{order.pk}/')
+        self.assertContains(success_response, 'UGX 2000')
+        self.assertContains(success_response, 'UGX 17000')
+
+    def test_minimum_order_value_prevents_checkout(self):
+        self.config.minimum_order_value = Decimal('20000.00')
+        self.config.save()
+
+        response = self.client.get('/checkout/')
+
+        self.assertRedirects(response, '/cart/')
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_staff_settings_persist_valid_values_and_reject_invalid_values(self):
+        user = get_user_model().objects.create_user(
+            username='settings-staff',
+            password='test-password',
+        )
+        self.client.force_login(user)
+
+        response = self.client.get('/staff/settings/')
+        self.assertContains(response, 'value="2000.00"')
+        self.assertContains(response, 'value="35000.00"')
+        self.assertContains(response, 'value="0.00"')
+
+        response = self.client.post('/staff/settings/', {
+            'delivery_fee': '3000',
+            'free_delivery_threshold': '20000',
+            'minimum_order_value': '1000',
+        })
+        self.assertRedirects(response, '/staff/settings/')
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.delivery_fee, Decimal('3000'))
+        self.assertEqual(self.config.free_delivery_threshold, Decimal('20000'))
+        self.assertEqual(self.config.minimum_order_value, Decimal('1000'))
+
+        response = self.client.post('/staff/settings/', {
+            'delivery_fee': '-1',
+            'free_delivery_threshold': '20000',
+            'minimum_order_value': '1000',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.delivery_fee, Decimal('3000'))

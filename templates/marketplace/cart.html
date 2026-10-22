@@ -5,6 +5,14 @@
 {% block content %}
 <h1 class="text-2xl font-bold mb-6 text-slate-800">Your Cart</h1>
 
+{% if messages %}
+    {% for message in messages %}
+    <div class="mb-4 p-3 rounded-xl {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-100{% else %}bg-orange-50 text-orange-700 border border-orange-100{% endif %} text-sm font-medium">
+        {{ message }}
+    </div>
+    {% endfor %}
+{% endif %}
+
 <div id="cart-body" hx-on::after-swap="if (window.lucide) lucide.createIcons()">
     {% include "marketplace/_cart_body.html" %}
 </div>

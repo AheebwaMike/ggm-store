@@ -32,9 +32,49 @@ class Product(models.Model):
 
 class Apartment(models.Model):
     name = models.CharField(max_length=255, unique=True) # e.g., "Block B"
+    delivery_fee_override = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Leave blank to use the global delivery fee. Set to 0 for free delivery.",
+    )
     
     def __str__(self):
         return self.name
+
+
+class StoreConfig(models.Model):
+    delivery_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=2000.00,
+        help_text="Standard delivery fee",
+    )
+    free_delivery_threshold = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=35000.00,
+        help_text="Order amount for free delivery",
+    )
+    minimum_order_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Minimum cart total to allow checkout (0 means no limit)",
+    )
+
+    class Meta:
+        verbose_name = "Store Configuration"
+        verbose_name_plural = "Store Configuration"
+
+    def __str__(self):
+        return "Store Configuration"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
 
 class Customer(models.Model):
     phone_number = models.CharField(max_length=20, unique=True)
@@ -62,6 +102,7 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='cash')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

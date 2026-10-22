@@ -33,6 +33,10 @@
                 </div>
 
                 <div class="border-t border-slate-200 mt-3 pt-3 flex justify-between font-bold">
+                    <span class="text-slate-600 font-medium">Delivery Fee</span>
+                    <span class="text-slate-700">{% if order.delivery_fee == 0 %}FREE{% else %}UGX {{ order.delivery_fee|floatformat:0 }}{% endif %}</span>
+                </div>
+                <div class="border-t border-slate-200 mt-3 pt-3 flex justify-between font-bold">
                     <span class="text-slate-800">Total</span>
                     <span class="text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</span>
                 </div>
