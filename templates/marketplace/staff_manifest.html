@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Driver Manifest - {{ today|date:"d M Y" }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @page { margin: 15mm; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; margin: 0; font-size: 12px; }
+            .print-container { max-width: 100%; border: none !important; box-shadow: none !important; }
+            .manifest-summary { background: white !important; }
+            .manifest-group, .manifest-order { break-inside: avoid; page-break-inside: avoid; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 p-6 text-slate-900">
+    <div class="no-print max-w-3xl mx-auto mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold">Driver's Manifest</h1>
+            <p class="text-slate-500">Generated on {{ today|date:"l, d F Y" }}</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="window.print()" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-2 rounded-xl shadow flex items-center gap-2">
+                Print Manifest
+            </button>
+            <button onclick="window.close()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-2 rounded-xl">Close</button>
+        </div>
+    </div>
+
+    <main class="print-container max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+        <header class="border-b-2 border-slate-800 pb-4 mb-6 flex justify-between items-end">
+            <div>
+                <h1 class="text-2xl font-black uppercase tracking-wider">GGM Store - Delivery Manifest</h1>
+                <p class="text-sm font-medium text-slate-600 mt-1">{{ today|date:"l, d F Y" }}</p>
+            </div>
+            <p class="text-sm font-bold">Total Drops: {{ total_orders }}</p>
+        </header>
+
+        <section class="manifest-summary mb-8 p-4 bg-slate-100 rounded-lg border border-slate-300 flex justify-between items-center">
+            <div>
+                <p class="text-xs font-bold text-slate-500 uppercase">Cash to Collect</p>
+                <p class="text-2xl font-black text-slate-900">UGX {{ cash_to_collect|floatformat:0 }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs font-bold text-slate-500 uppercase">MoMo to Collect (Verify)</p>
+                <p class="text-lg font-bold text-slate-700">UGX {{ momo_to_collect|floatformat:0 }}</p>
+            </div>
+        </section>
+
+        <section>
+            {% regroup orders by customer.apartment.name|default:"Unknown Apartment" as apartment_list %}
+            {% for apartment in apartment_list %}
+            <div class="manifest-group mb-6">
+                <h2 class="text-lg font-bold border-b border-slate-300 pb-1 mb-3 uppercase">{{ apartment.grouper }}</h2>
+                <div class="space-y-3">
+                    {% for order in apartment.list %}
+                    <article class="manifest-order flex items-start justify-between border border-slate-200 p-3 rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1 w-5 h-5 border-2 border-slate-400 rounded flex-shrink-0" aria-label="Delivery completion checkbox"></div>
+                            <div>
+                                <p class="font-bold text-base">#{{ order.id }} - {{ order.customer.name|default:order.customer.phone_number }}</p>
+                                {% if order.customer.unit_number %}
+                                <p class="text-sm font-medium text-slate-700">Unit: {{ order.customer.unit_number }}</p>
+                                {% endif %}
+                                <p class="text-xs text-slate-500 mt-1">Phone: {{ order.customer.phone_number }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            {% if order.payment_method == 'cash' %}
+                            <span class="inline-block border border-slate-800 text-slate-800 text-xs font-bold px-2 py-1 rounded">COLLECT CASH</span>
+                            <p class="font-black text-lg mt-1">UGX {{ order.total_amount|floatformat:0 }}</p>
+                            {% else %}
+                            <span class="inline-block border border-slate-800 text-slate-800 text-xs font-bold px-2 py-1 rounded">MOMO TO COLLECT</span>
+                            <p class="font-bold text-lg mt-1">UGX {{ order.total_amount|floatformat:0 }}</p>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12">
+                <p class="text-lg font-bold text-slate-500">No active deliveries for today.</p>
+                <p class="text-sm text-slate-500 mt-1">Orders must be confirmed or packed to appear here.</p>
+            </div>
+            {% endfor %}
+        </section>
+
+        {% if orders %}
+        <footer class="mt-12 pt-6 border-t border-slate-300 grid grid-cols-2 gap-8 text-sm">
+            <div>
+                <p class="font-bold mb-8">Dispatched By (Staff):</p>
+                <div class="border-b border-slate-400 w-3/4"></div>
+            </div>
+            <div>
+                <p class="font-bold mb-8">Received By (Driver Signature):</p>
+                <div class="border-b border-slate-400 w-3/4"></div>
+            </div>
+        </footer>
+        {% endif %}
+    </main>
+</body>
+</html>

@@ -465,3 +465,30 @@ def owner_dashboard(request):
         'top_products': top_products,
         'recent_orders': recent_orders,
     })
+
+
+@login_required
+def staff_manifest(request):
+    today = timezone.localdate()
+    orders = Order.objects.filter(
+        created_at__date=today,
+        status__in=['confirmed', 'packed'],
+    ).select_related(
+        'customer',
+        'customer__apartment',
+    ).order_by(
+        'customer__apartment__name',
+        'id',
+    )
+    totals = orders.aggregate(
+        cash_to_collect=Sum('total_amount', filter=Q(payment_method='cash')),
+        momo_to_collect=Sum('total_amount', filter=Q(payment_method='momo')),
+    )
+
+    return render(request, 'marketplace/staff_manifest.html', {
+        'orders': orders,
+        'today': today,
+        'cash_to_collect': totals['cash_to_collect'] or 0,
+        'momo_to_collect': totals['momo_to_collect'] or 0,
+        'total_orders': orders.count(),
+    })

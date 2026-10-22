@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
-from .models import Customer, Order, OrderItem, Product
+from .models import Apartment, Customer, Order, OrderItem, Product
 
 
 class OwnerDashboardTests(TestCase):
@@ -117,3 +117,87 @@ class OwnerDashboardTests(TestCase):
         self.client.force_login(self.owner)
         owner_response = self.client.get('/staff/')
         self.assertContains(owner_response, 'href="/owner/"')
+
+
+class StaffManifestTests(TestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(
+            username='manifest-staff',
+            password='test-password',
+            is_staff=True,
+        )
+
+    def create_order(
+        self,
+        *,
+        phone,
+        apartment=None,
+        status='confirmed',
+        payment_method='cash',
+        total_amount,
+        name='',
+    ):
+        customer = Customer.objects.create(
+            phone_number=phone,
+            name=name,
+            apartment=apartment,
+        )
+        return Order.objects.create(
+            customer=customer,
+            status=status,
+            payment_method=payment_method,
+            total_amount=total_amount,
+        )
+
+    def test_manifest_shows_today_active_orders_grouped_and_summed(self):
+        apartment_a = Apartment.objects.create(name='Apartment A')
+        apartment_b = Apartment.objects.create(name='Apartment B')
+        order_b = self.create_order(
+            phone='0700000001',
+            apartment=apartment_b,
+            total_amount=Decimal('10000.00'),
+        )
+        order_a = self.create_order(
+            phone='0700000002',
+            apartment=apartment_a,
+            payment_method='momo',
+            status='packed',
+            total_amount=Decimal('2500.00'),
+        )
+        self.create_order(
+            phone='0700000003',
+            total_amount=Decimal('500.00'),
+            status='new',
+        )
+        old_order = self.create_order(
+            phone='0700000004',
+            total_amount=Decimal('900.00'),
+            status='packed',
+        )
+        Order.objects.filter(pk=old_order.pk).update(
+            created_at=timezone.now() - timedelta(days=1),
+        )
+
+        self.client.force_login(self.staff)
+        response = self.client.get('/staff/manifest/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_orders'], 2)
+        self.assertEqual(response.context['cash_to_collect'], Decimal('10000.00'))
+        self.assertEqual(response.context['momo_to_collect'], Decimal('2500.00'))
+        content = response.content.decode()
+        self.assertLess(content.index('Apartment A'), content.index('Apartment B'))
+        self.assertIn(f'#{order_a.pk}', content)
+        self.assertIn(f'#{order_b.pk}', content)
+        self.assertNotIn(f'#{old_order.pk}', content)
+        self.assertIn('MOMO TO COLLECT', content)
+        self.assertIn('aria-label="Delivery completion checkbox"', content)
+
+    def test_manifest_requires_login_and_staff_header_links_to_it(self):
+        response = self.client.get('/staff/manifest/')
+        self.assertRedirects(response, '/login/?next=/staff/manifest/')
+
+        self.client.force_login(self.staff)
+        staff_response = self.client.get('/staff/')
+        self.assertContains(staff_response, 'href="/staff/manifest/"')
+        self.assertContains(staff_response, 'target="_blank"')
