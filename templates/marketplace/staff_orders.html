@@ -22,13 +22,19 @@
             <i data-lucide="layout-dashboard" class="w-6 h-6 text-orange-500"></i> Orders
         </h1>
         <div class="flex items-center gap-3">
+            {% if user.is_superuser %}
+            <a href="{% url 'owner_dashboard' %}" class="text-sm font-medium text-orange-600 hover:text-orange-700 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200 transition-colors shadow-sm flex items-center gap-1">
+                <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Dashboard
+            </a>
+            {% endif %}
             <a href="{% url 'staff_stock' %}" class="text-sm font-medium text-slate-600 hover:text-orange-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 transition-colors shadow-sm">
-                Manage Stock
+                Stock
             </a>
             <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button type="submit" class="text-sm font-medium text-slate-500 hover:text-red-600">Logout</button>
             </form>
+        </div>
     </div>
 
     <nav class="flex overflow-x-auto gap-2 mb-6 pb-2 snap-x hide-scrollbar" aria-label="Filter orders">

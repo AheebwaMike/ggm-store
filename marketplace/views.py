@@ -5,8 +5,9 @@ from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -426,3 +427,41 @@ def service_worker(request):
     response['Service-Worker-Allowed'] = '/'
     response['Cache-Control'] = 'no-cache'
     return response
+
+
+@staff_member_required
+def owner_dashboard(request):
+    today = timezone.localdate()
+    today_orders = Order.objects.filter(
+        created_at__date=today,
+    ).exclude(status='cancelled')
+
+    total_orders = today_orders.count()
+    total_revenue = today_orders.aggregate(total=Sum('total_amount'))['total'] or 0
+    avg_order_value = total_revenue / total_orders if total_orders else 0
+
+    cash_orders = today_orders.filter(payment_method='cash').count()
+    momo_orders = today_orders.filter(payment_method='momo').count()
+    top_products = OrderItem.objects.filter(
+        order__in=today_orders,
+        product__isnull=False,
+    ).values(
+        'product__name',
+    ).annotate(
+        total_qty=Sum('quantity'),
+    ).order_by('-total_qty', 'product__name')[:5]
+
+    recent_orders = Order.objects.select_related(
+        'customer',
+    ).order_by('-created_at')[:10]
+
+    return render(request, 'marketplace/owner_dashboard.html', {
+        'today': today,
+        'total_orders': total_orders,
+        'total_revenue': total_revenue,
+        'avg_order_value': avg_order_value,
+        'cash_orders': cash_orders,
+        'momo_orders': momo_orders,
+        'top_products': top_products,
+        'recent_orders': recent_orders,
+    })
