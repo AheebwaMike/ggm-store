@@ -11,6 +11,7 @@ from .models import (
     ProductGroup,
     StoreConfig,
     Unit,
+    WhatsAppNotificationLog,
 )
 
 @admin.register(ProductGroup)
@@ -76,6 +77,14 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'payment_method', 'created_at')
     search_fields = ('id', 'customer__name', 'customer__phone_number')
     inlines = [OrderItemInline]
+
+
+@admin.register(WhatsAppNotificationLog)
+class WhatsAppNotificationLogAdmin(admin.ModelAdmin):
+    list_display = ('order', 'status_sent', 'sent_at')
+    list_filter = ('status_sent', 'sent_at')
+    search_fields = ('order__id', 'order__customer__phone_number')
+    readonly_fields = ('order', 'status_sent', 'sent_at')
 
 
 @admin.register(FeaturedCampaign)

@@ -17,6 +17,7 @@ urlpatterns = [
     path('staff/', views.staff_orders, name='staff_orders'),
     path('staff/toggle-store/', views.staff_toggle_store_status, name='staff_toggle_store_status'),
     path('staff/order/<int:order_id>/', views.staff_order_detail, name='staff_order_detail'),
+    path('staff/order/<int:order_id>/log-wa/<str:status_sent>/', views.log_whatsapp_notification, name='log_whatsapp_notification'),
     path('staff/order/<int:order_id>/action/', views.staff_order_action, name='staff_order_action'),
     path('staff/order/<int:order_id>/slip/', views.staff_order_slip, name='staff_order_slip'),
     path('staff/stock/', views.staff_stock, name='staff_stock'),

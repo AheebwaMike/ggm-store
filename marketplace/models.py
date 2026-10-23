@@ -78,6 +78,11 @@ class StoreConfig(models.Model):
         default="We are currently closed. Please check back later or order via WhatsApp.",
         help_text="Message shown to customers when closed",
     )
+    whatsapp_number = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Store WhatsApp number (e.g., 256770000000) without '+' or spaces",
+    )
 
     class Meta:
         verbose_name = "Store Configuration"
@@ -128,6 +133,16 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} - {self.customer.name}"
+
+
+class WhatsAppNotificationLog(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='wa_logs')
+    status_sent = models.CharField(max_length=20)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"WhatsApp for Order #{self.order.id} ({self.status_sent})"
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', db_index=True)

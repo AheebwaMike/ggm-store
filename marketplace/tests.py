@@ -13,6 +13,7 @@ from .models import (
     Product,
     ProductGroup,
     StoreConfig,
+    WhatsAppNotificationLog,
 )
 
 
@@ -359,12 +360,14 @@ class DeliveryPricingTests(TestCase):
             'delivery_fee': '3000',
             'free_delivery_threshold': '20000',
             'minimum_order_value': '1000',
+            'whatsapp_number': ' +256 770-000-000 ',
         })
         self.assertRedirects(response, '/staff/settings/')
         self.config.refresh_from_db()
         self.assertEqual(self.config.delivery_fee, Decimal('3000'))
         self.assertEqual(self.config.free_delivery_threshold, Decimal('20000'))
         self.assertEqual(self.config.minimum_order_value, Decimal('1000'))
+        self.assertEqual(self.config.whatsapp_number, '256770000000')
 
         response = self.client.post('/staff/settings/', {
             'delivery_fee': '-1',
@@ -374,6 +377,80 @@ class DeliveryPricingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.config.refresh_from_db()
         self.assertEqual(self.config.delivery_fee, Decimal('3000'))
+
+
+class WhatsAppIntegrationTests(TestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(
+            username='whatsapp-staff',
+            password='test-password',
+            is_staff=True,
+        )
+        self.customer = Customer.objects.create(
+            phone_number='0701234567',
+            name='Test Customer',
+        )
+        self.order = Order.objects.create(
+            customer=self.customer,
+            status='new',
+            total_amount=Decimal('12500.00'),
+        )
+        self.config = StoreConfig.objects.create(
+            whatsapp_number='256770000000',
+        )
+
+    def test_staff_order_detail_builds_notify_link_and_logs_staff_click(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(f'/staff/order/{self.order.pk}/')
+
+        self.assertContains(response, 'Notify Confirmed on WhatsApp')
+        self.assertContains(response, 'https://wa.me/256701234567?text=')
+        self.assertContains(response, 'UGX%2012%2C500')
+
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/log-wa/confirmed/',
+        )
+        self.assertEqual(response.status_code, 204)
+        log = WhatsAppNotificationLog.objects.get()
+        self.assertEqual(log.order, self.order)
+        self.assertEqual(log.status_sent, 'confirmed')
+
+    def test_staff_notification_requires_staff_and_matches_order_status(self):
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/log-wa/confirmed/',
+        )
+        self.assertRedirects(
+            response,
+            f'/admin/login/?next=%2Fstaff%2Forder%2F{self.order.pk}%2Flog-wa%2Fconfirmed%2F',
+        )
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/log-wa/packed/',
+        )
+        self.assertEqual(response.status_code, 409)
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/log-wa/cancelled/',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(WhatsAppNotificationLog.objects.exists())
+
+    def test_customer_order_pages_include_configured_whatsapp_contact(self):
+        session = self.client.session
+        session['customer_id'] = self.customer.pk
+        session.save()
+
+        detail_response = self.client.get(
+            f'/my-orders/{self.order.pk}/',
+        )
+        self.assertContains(detail_response, 'WhatsApp Us')
+        self.assertContains(detail_response, 'https://wa.me/256770000000?text=')
+        self.assertContains(detail_response, 'order%20%231')
+
+        success_response = self.client.get(
+            f'/order/success/{self.order.pk}/',
+        )
+        self.assertContains(success_response, 'WhatsApp Us')
+        self.assertContains(success_response, 'https://wa.me/256770000000?text=')
 
 
 class LowStockAlertTests(TestCase):

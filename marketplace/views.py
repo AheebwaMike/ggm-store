@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta
 from decimal import Decimal
 from functools import wraps
@@ -26,6 +27,7 @@ from .models import (
     Product,
     ProductGroup,
     StoreConfig,
+    WhatsAppNotificationLog,
 )
 
 
@@ -415,6 +417,11 @@ def staff_settings(request):
                 'closed_message',
                 config.closed_message,
             )[:255]
+            config.whatsapp_number = re.sub(
+                r'\D',
+                '',
+                request.POST.get('whatsapp_number', ''),
+            )[:20]
             config.save()
             messages.success(request, 'Settings updated successfully.')
             return redirect('staff_settings')
@@ -424,7 +431,11 @@ def staff_settings(request):
 
 def order_success(request, order_id):
     order = get_object_or_404(Order, id=order_id)
-    return render(request, 'marketplace/order_success.html', {'order': order})
+    return render(request, 'marketplace/order_success.html', {
+        'order': order,
+        'config': _get_store_config(),
+        'whatsapp_message': f'Hi GGM Store, I need help with order #{order.id}',
+    })
 
 
 def customer_orders(request):
@@ -471,6 +482,8 @@ def customer_order_detail(request, order_id):
 
     return render(request, 'marketplace/customer_order_detail.html', {
         'order': order,
+        'config': _get_store_config(),
+        'whatsapp_message': f'Hi GGM Store, I need help with order #{order.id}',
     })
 
 
@@ -526,7 +539,53 @@ def staff_toggle_store_status(request):
 @login_required
 def staff_order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id)
-    return render(request, 'marketplace/staff_order_detail.html', {'order': order})
+    status_to_notify = {
+        'new': 'confirmed',
+        'packed': 'packed',
+    }.get(order.status)
+    customer_name = order.customer.name or 'there'
+    whatsapp_message = ''
+    if status_to_notify == 'confirmed':
+        whatsapp_message = (
+            f'Hi {customer_name}, your order #{order.id} at GGM Store has '
+            f'been confirmed and is being packed! Total to pay: '
+            f'UGX {order.total_amount:,.0f}'
+        )
+    elif status_to_notify == 'packed':
+        whatsapp_message = (
+            f'Hi {customer_name}, your order #{order.id} from GGM Store is '
+            f'on the way! The driver is carrying it. Total to pay: '
+            f'UGX {order.total_amount:,.0f}'
+        )
+    customer_whatsapp_number = re.sub(r'\D', '', order.customer.phone_number)
+    if customer_whatsapp_number.startswith('0'):
+        customer_whatsapp_number = f'256{customer_whatsapp_number[1:]}'
+    return render(request, 'marketplace/staff_order_detail.html', {
+        'order': order,
+        'config': _get_store_config(),
+        'status_to_notify': status_to_notify,
+        'whatsapp_message': whatsapp_message,
+        'customer_whatsapp_number': customer_whatsapp_number,
+    })
+
+
+@staff_member_required
+@require_POST
+def log_whatsapp_notification(request, order_id, status_sent):
+    if status_sent not in {'confirmed', 'packed'}:
+        return HttpResponse(status=400)
+
+    order = get_object_or_404(Order, id=order_id)
+    if status_sent == 'confirmed' and order.status != 'new':
+        return HttpResponse(status=409)
+    if status_sent == 'packed' and order.status != 'packed':
+        return HttpResponse(status=409)
+
+    WhatsAppNotificationLog.objects.create(
+        order=order,
+        status_sent=status_sent,
+    )
+    return HttpResponse(status=204)
 
 
 @login_required

@@ -58,9 +58,18 @@
 
     <div class="bg-orange-50 rounded-2xl p-5 text-center border border-orange-100">
         <p class="text-sm text-orange-800 font-medium mb-2">Need help with this order?</p>
-        <a href="tel:+256790167543" class="inline-flex items-center gap-2 bg-white text-orange-600 font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
-            <i data-lucide="phone-call" class="w-4 h-4"></i> Call the Shop
-        </a>
+        <div class="flex flex-col sm:flex-row gap-2 justify-center">
+            <a href="tel:+256790167543" class="inline-flex items-center justify-center gap-2 bg-white text-orange-600 font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
+                <i data-lucide="phone-call" class="w-4 h-4"></i> Call the Shop
+            </a>
+            {% if config.whatsapp_number %}
+            <a href="https://wa.me/{{ config.whatsapp_number }}?text={{ whatsapp_message|urlencode }}"
+               target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center justify-center gap-2 bg-[#25D366] text-white font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
+                <i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp Us
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -34,6 +34,11 @@
             <input id="minimum-order-value" type="number" name="minimum_order_value" min="0" step="0.01" value="{{ config.minimum_order_value|floatformat:2 }}" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:outline-none">
             <p class="text-xs text-slate-400 mt-1">Set to 0 to allow any order size.</p>
         </div>
+        <div>
+            <label for="whatsapp-number" class="block text-sm font-medium text-slate-700 mb-1">Store WhatsApp Number</label>
+            <input id="whatsapp-number" type="text" name="whatsapp_number" value="{{ config.whatsapp_number }}" maxlength="20" inputmode="tel" placeholder="e.g., 256770000000" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+            <p class="text-xs text-slate-400 mt-1">Include country code, no '+' or spaces (e.g., 256...). Customers will message this number.</p>
+        </div>
         <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-sm transition-all active:scale-[0.98]">
             Save Settings
         </button>

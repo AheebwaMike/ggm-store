@@ -29,6 +29,22 @@
         <i data-lucide="phone-call" class="w-6 h-6"></i> Call {{ order.customer.phone_number }}
     </a>
 
+    {% if config.whatsapp_number and status_to_notify %}
+    <div class="mb-4">
+        <a id="notify-customer-whatsapp"
+           href="https://wa.me/{{ customer_whatsapp_number }}?text={{ whatsapp_message|urlencode }}"
+           target="_blank" rel="noopener noreferrer"
+           class="flex items-center justify-center gap-3 w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3.5 rounded-2xl shadow-sm active:scale-[0.98] transition-all">
+            <i data-lucide="message-circle" class="w-5 h-5"></i>
+            {% if status_to_notify == 'confirmed' %}Notify Confirmed on WhatsApp{% else %}Notify On-the-Way on WhatsApp{% endif %}
+        </a>
+        <span class="hidden"
+              hx-post="{% url 'log_whatsapp_notification' order.id status_to_notify %}"
+              hx-trigger="click from:#notify-customer-whatsapp"
+              hx-swap="none"></span>
+    </div>
+    {% endif %}
+
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
         <div class="flex justify-between items-start gap-3 mb-4">
             <div>
