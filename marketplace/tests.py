@@ -327,3 +327,77 @@ class DeliveryPricingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.config.refresh_from_db()
         self.assertEqual(self.config.delivery_fee, Decimal('3000'))
+
+
+class LowStockAlertTests(TestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(
+            username='low-stock-staff',
+            password='test-password',
+            is_staff=True,
+        )
+        self.owner = get_user_model().objects.create_superuser(
+            username='low-stock-owner',
+            email='low-stock-owner@example.com',
+            password='test-password',
+        )
+        self.low_stock_product = Product.objects.create(
+            code='LOW001',
+            name='Low Stock Product',
+            stock_quantity=Decimal('2.00'),
+            low_stock_threshold=Decimal('5.00'),
+            is_active=True,
+        )
+        self.healthy_product = Product.objects.create(
+            code='OK001',
+            name='Healthy Product',
+            stock_quantity=Decimal('8.00'),
+            low_stock_threshold=Decimal('5.00'),
+            is_active=True,
+        )
+        self.disabled_product = Product.objects.create(
+            code='OFF001',
+            name='Disabled Product',
+            stock_quantity=Decimal('1.00'),
+            low_stock_threshold=Decimal('5.00'),
+            is_active=False,
+        )
+
+    def test_owner_dashboard_alerts_on_active_low_stock_only(self):
+        self.client.force_login(self.owner)
+        response = self.client.get('/owner/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.context['low_stock_products']),
+            [self.low_stock_product],
+        )
+        self.assertContains(response, 'Low Stock Alerts')
+        self.assertContains(response, 'Low Stock Product')
+        self.assertContains(response, 'View all low stock items')
+
+    def test_staff_stock_low_stock_filter_and_warning_badge(self):
+        self.client.force_login(self.staff)
+        response = self.client.get('/staff/stock/?filter=low_stock')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.context['products']),
+            [self.low_stock_product],
+        )
+        self.assertContains(response, '2 left')
+        self.assertNotContains(response, 'Healthy Product')
+        self.assertNotContains(response, 'Disabled Product')
+
+    def test_staff_stock_search_can_be_combined_with_low_stock_filter(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(
+            '/staff/stock/?filter=low_stock&q=LOW001',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.context['products']),
+            [self.low_stock_product],
+        )
+        self.assertEqual(response.context['filter_type'], 'low_stock')

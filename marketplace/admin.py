@@ -32,10 +32,11 @@ class ProductAdmin(admin.ModelAdmin):
         'unit',
         'selling_price',
         'stock_quantity',
+        'low_stock_threshold',
         'is_active',
         'image_preview',
     )
-    list_filter = ('is_active', 'group', 'unit')
+    list_filter = ('is_active', 'group', 'unit', 'low_stock_threshold')
     search_fields = ('code', 'name')
     readonly_fields = ('image_preview',)
 

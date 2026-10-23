@@ -10,7 +10,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -511,14 +511,25 @@ def staff_order_action(request, order_id):
 @login_required
 def staff_stock(request):
     q = request.GET.get('q', '').strip()
-    products = []
+    filter_type = request.GET.get('filter', '')
+    products = Product.objects.all().order_by('name')
     if q:
-        products = Product.objects.filter(
+        products = products.filter(
             Q(name__icontains=q) | Q(code__icontains=q)
-        ).order_by('name')[:50]
+        )
+
+    if filter_type == 'low_stock':
+        products = products.filter(
+            is_active=True,
+            stock_quantity__lte=F('low_stock_threshold'),
+        ).order_by('stock_quantity', 'name')
+    elif q:
+        products = products[:50]
+
     return render(request, 'marketplace/staff_stock.html', {
         'products': products,
         'q': q,
+        'filter_type': filter_type,
     })
 
 
@@ -578,6 +589,10 @@ def owner_dashboard(request):
     ).annotate(
         total_qty=Sum('quantity'),
     ).order_by('-total_qty', 'product__name')[:5]
+    low_stock_products = Product.objects.filter(
+        is_active=True,
+        stock_quantity__lte=F('low_stock_threshold'),
+    ).order_by('stock_quantity', 'name')[:10]
 
     recent_orders = Order.objects.select_related(
         'customer',
@@ -591,6 +606,7 @@ def owner_dashboard(request):
         'cash_orders': cash_orders,
         'momo_orders': momo_orders,
         'top_products': top_products,
+        'low_stock_products': low_stock_products,
         'recent_orders': recent_orders,
     })
 

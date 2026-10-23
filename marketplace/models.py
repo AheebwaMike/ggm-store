@@ -23,6 +23,12 @@ class Product(models.Model):
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     stock_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    low_stock_threshold = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=5.00,
+        help_text="Alert when stock falls to or below this number",
+    )
     manually_disabled = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True) # Toggle to hide out-of-stock or disabled items
     image = models.ImageField(upload_to='products/', null=True, blank=True)

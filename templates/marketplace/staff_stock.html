@@ -10,9 +10,20 @@
         </a>
     </div>
 
-    <h1 class="text-2xl font-bold mb-4 text-slate-800">Manage Stock</h1>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Manage Stock</h1>
+        <div class="flex bg-slate-100 p-1 rounded-xl shrink-0">
+            <a href="{% url 'staff_stock' %}" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors {% if filter_type != 'low_stock' %}bg-white text-slate-800 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">
+                All Items
+            </a>
+            <a href="{% url 'staff_stock' %}?filter=low_stock" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors {% if filter_type == 'low_stock' %}bg-red-500 text-white shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %} flex items-center gap-1">
+                <i data-lucide="alert-triangle" class="w-3 h-3"></i> Low Stock
+            </a>
+        </div>
+    </div>
 
     <form method="get" class="relative mb-6">
+        {% if filter_type %}<input type="hidden" name="filter" value="{{ filter_type }}">{% endif %}
         <label for="product-search" class="sr-only">Search products by name or code</label>
         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
@@ -21,13 +32,19 @@
                class="w-full bg-white border border-slate-200 rounded-xl py-3 pl-11 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">
     </form>
 
-    {% if q %}
+    {% if q or filter_type == 'low_stock' %}
         <div class="space-y-3" hx-on::after-swap="lucide.createIcons()">
             {% for product in products %}
                 {% include "marketplace/_staff_product_row.html" with product=product %}
             {% empty %}
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
-                    <p class="text-slate-500 font-medium">No products found matching "{{ q }}".</p>
+                    {% if filter_type == 'low_stock' %}
+                        <i data-lucide="check-circle" class="w-10 h-10 text-green-500 mx-auto mb-3"></i>
+                        <p class="text-slate-600 font-bold text-lg">All stocked up!</p>
+                        <p class="text-slate-400 text-sm mt-1">No items are currently below their threshold.</p>
+                    {% else %}
+                        <p class="text-slate-500 font-medium">No products found matching "{{ q }}".</p>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>
