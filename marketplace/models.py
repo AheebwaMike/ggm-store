@@ -14,7 +14,7 @@ class Unit(models.Model):
         return self.name
 
 class Product(models.Model):
-    code = models.CharField(max_length=50, unique=True) # e.g., "000001"
+    code = models.CharField(max_length=50, unique=True, db_index=True) # e.g., "000001"
     name = models.CharField(max_length=255)
     group = models.ForeignKey(ProductGroup, on_delete=models.SET_NULL, null=True, blank=True)
     unit = models.ForeignKey(Unit, on_delete=models.SET_NULL, null=True, blank=True)
@@ -92,7 +92,7 @@ class StoreConfig(models.Model):
 
 
 class Customer(models.Model):
-    phone_number = models.CharField(max_length=20, unique=True)
+    phone_number = models.CharField(max_length=20, unique=True, db_index=True)
     name = models.CharField(max_length=255, blank=True)
     apartment = models.ForeignKey(Apartment, on_delete=models.SET_NULL, null=True, blank=True)
     unit_number = models.CharField(max_length=50, blank=True) # e.g., "Apt 4"
@@ -114,20 +114,23 @@ class Order(models.Model):
     ]
     
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', db_index=True)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='cash')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     note = models.TextField(blank=True, help_text="Customer delivery instructions")
     
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
         return f"Order #{self.id} - {self.customer.name}"
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', db_index=True)
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1.00)
     price_at_time_of_order = models.DecimalField(max_digits=10, decimal_places=2) # Lock in the price
@@ -142,10 +145,11 @@ class FeaturedCampaign(models.Model):
         help_text="Internal name for this campaign (e.g., 'Weekend Sugar Promo')",
     )
     products = models.ManyToManyField(Product, related_name='featured_in')
-    starts_at = models.DateTimeField()
-    ends_at = models.DateTimeField()
+    starts_at = models.DateTimeField(db_index=True)
+    ends_at = models.DateTimeField(db_index=True)
     is_active = models.BooleanField(
         default=True,
+        db_index=True,
         help_text="Uncheck to kill this campaign early",
     )
 
