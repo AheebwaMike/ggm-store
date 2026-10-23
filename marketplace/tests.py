@@ -641,6 +641,105 @@ class AutoGroupProductsCommandTests(TestCase):
         self.assertIn('Successfully auto-grouped 0 products.', output.getvalue())
 
 
+class ProductDetailTests(TestCase):
+    def setUp(self):
+        self.group = ProductGroup.objects.create(name='Groceries')
+        self.small_variant = Product.objects.create(
+            code='PDP001',
+            name='KAKIRA SUGAR 1KG',
+            parent_group='Kakira Sugar',
+            variant_label='1KG',
+            group=self.group,
+            selling_price=Decimal('5000.00'),
+            stock_quantity=Decimal('10.00'),
+            is_active=True,
+        )
+        self.large_variant = Product.objects.create(
+            code='PDP002',
+            name='KAKIRA SUGAR 25KG',
+            parent_group='Kakira Sugar',
+            variant_label='25KG',
+            group=self.group,
+            selling_price=Decimal('90000.00'),
+            stock_quantity=Decimal('3.00'),
+            is_active=True,
+        )
+        self.unavailable_variant = Product.objects.create(
+            code='PDP003',
+            name='KAKIRA SUGAR 50KG',
+            parent_group='Kakira Sugar',
+            variant_label='50KG',
+            group=self.group,
+            selling_price=Decimal('170000.00'),
+            stock_quantity=Decimal('0.00'),
+            is_active=False,
+        )
+
+    def test_product_detail_renders_variants_in_price_order(self):
+        response = self.client.get(
+            reverse('product_detail', args=[self.large_variant.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Kakira Sugar')
+        self.assertContains(response, '1KG')
+        self.assertContains(response, '25KG')
+        self.assertNotContains(response, '50KG')
+        self.assertContains(response, 'Select Option')
+        self.assertContains(response, 'UGX 90000')
+        self.assertLess(
+            response.content.index(b'1KG'),
+            response.content.index(b'25KG'),
+        )
+
+    def test_variant_partial_shows_selected_variant_and_cart_target(self):
+        response = self.client.get(
+            reverse('product_variant_partial', args=[self.large_variant.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'UGX 90000')
+        self.assertContains(response, 'In Stock')
+        self.assertContains(
+            response,
+            f'hx-post="/cart/add/{self.large_variant.pk}/"',
+        )
+
+    def test_unavailable_variant_shows_out_of_stock_and_no_add_button(self):
+        response = self.client.get(
+            reverse('product_variant_partial', args=[self.unavailable_variant.pk]),
+        )
+
+        self.assertContains(response, 'Out of Stock')
+        self.assertNotContains(response, 'Add to Cart')
+
+    def test_home_and_category_product_names_link_to_detail(self):
+        home_response = self.client.get('/?q=KAKIRA')
+        self.assertContains(
+            home_response,
+            f'href="/product/{self.small_variant.pk}/"',
+        )
+
+        category_response = self.client.get(
+            reverse('product_list', args=[self.group.pk]),
+        )
+        self.assertContains(
+            category_response,
+            f'href="/product/{self.small_variant.pk}/"',
+        )
+
+    def test_add_to_cart_from_variant_adds_that_product(self):
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.large_variant.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'],
+            {str(self.large_variant.pk): 1},
+        )
+
+
 class WhatsAppIntegrationTests(TestCase):
     def setUp(self):
         self.staff = get_user_model().objects.create_user(

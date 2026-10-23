@@ -81,7 +81,7 @@
                     {% endif %}
                 </div>
                 <div class="flex-1 min-w-0 pr-2">
-                    <p class="font-medium text-slate-800 text-sm truncate">{{ product.name }}</p>
+                    <a href="{% url 'product_detail' product.id %}" class="font-medium text-slate-800 text-sm truncate hover:text-orange-600 transition-colors">{{ product.name }}</a>
                     <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
                     <p class="text-orange-600 font-bold mt-1">UGX {{ product.selling_price|floatformat:0 }}</p>
                 </div>
@@ -127,7 +127,7 @@
                 </div>
                 {% endif %}
                 <div>
-                    <p class="font-medium text-slate-800 text-sm line-clamp-2 leading-tight min-h-[2.5rem]">{{ product.name }}</p>
+                    <a href="{% url 'product_detail' product.id %}" class="font-medium text-slate-800 text-sm line-clamp-2 leading-tight min-h-[2.5rem] hover:text-orange-600 transition-colors">{{ product.name }}</a>
                     <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
                 </div>
                 <div class="mt-2 flex items-end justify-between">
@@ -170,7 +170,7 @@
                 </div>
                 {% endif %}
                 <div>
-                    <p class="font-medium text-slate-800 text-sm line-clamp-2 leading-tight min-h-[2.5rem]">{{ product.name }}</p>
+                    <a href="{% url 'product_detail' product.id %}" class="font-medium text-slate-800 text-sm line-clamp-2 leading-tight min-h-[2.5rem] hover:text-orange-600 transition-colors">{{ product.name }}</a>
                     <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
                 </div>
                 <div class="mt-2 flex items-end justify-between">

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.parent_group|default:product.name }} - GGM Store{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <a href="javascript:history.back()" class="text-sm text-slate-500 hover:text-orange-600 font-medium mb-4 inline-flex items-center gap-1 transition-colors">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+    </a>
+
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="w-full h-64 sm:h-80 bg-orange-50 flex items-center justify-center border-b border-slate-100 relative">
+            {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+            {% else %}
+                <i data-lucide="shopping-basket" class="w-24 h-24 text-orange-200"></i>
+            {% endif %}
+        </div>
+
+        <div class="p-6">
+            <h1 class="text-2xl font-bold text-slate-800 mb-2">{{ product.parent_group|default:product.name }}</h1>
+
+            {% if variants|length > 1 %}
+            <div class="mb-6">
+                <p class="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wide">Select Option</p>
+                <div class="flex flex-wrap gap-2">
+                    {% for variant in variants %}
+                    <button type="button"
+                            hx-get="{% url 'product_variant_partial' variant.id %}"
+                            hx-target="#variant-detail-container"
+                            hx-swap="innerHTML"
+                            hx-on::after-request="updateVariantSelection(this); updateUrl({{ variant.id }})"
+                            data-product-id="{{ variant.id }}"
+                            aria-pressed="{% if variant.id == product.id %}true{% else %}false{% endif %}"
+                            class="variant-option px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 {% if variant.id == product.id %}border-orange-500 bg-orange-50 text-orange-700{% else %}border-slate-200 bg-white text-slate-600 hover:border-orange-200{% endif %}">
+                        {{ variant.variant_label|default:variant.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div id="variant-detail-container">
+                {% include "marketplace/_product_variant_detail.html" %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateUrl(productId) {
+        const newUrl = `/product/${productId}/`;
+        window.history.replaceState({ path: newUrl }, '', newUrl);
+    }
+
+    function updateVariantSelection(selectedButton) {
+        document.querySelectorAll('.variant-option').forEach((button) => {
+            const isSelected = button === selectedButton;
+            button.setAttribute('aria-pressed', String(isSelected));
+            button.classList.toggle('border-orange-500', isSelected);
+            button.classList.toggle('bg-orange-50', isSelected);
+            button.classList.toggle('text-orange-700', isSelected);
+            button.classList.toggle('border-slate-200', !isSelected);
+            button.classList.toggle('bg-white', !isSelected);
+            button.classList.toggle('text-slate-600', !isSelected);
+        });
+        if (window.lucide) window.lucide.createIcons();
+    }
+</script>
+{% endblock %}

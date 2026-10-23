@@ -1066,3 +1066,34 @@ def staff_manifest(request):
         'momo_to_collect': totals['momo_to_collect'] or 0,
         'total_orders': orders.count(),
     })
+
+
+def product_detail(request, product_id):
+    product = get_object_or_404(
+        Product.objects.select_related('unit'),
+        id=product_id,
+    )
+    if product.parent_group:
+        variants = Product.objects.filter(
+            Q(parent_group=product.parent_group)
+            & (Q(is_active=True) | Q(pk=product.pk))
+        ).select_related('unit').order_by('selling_price')
+    else:
+        variants = [product]
+
+    return render(request, 'marketplace/product_detail.html', {
+        'product': product,
+        'variants': variants,
+        'config': _get_store_config(),
+    })
+
+
+def product_variant_partial(request, product_id):
+    product = get_object_or_404(
+        Product.objects.select_related('unit'),
+        id=product_id,
+    )
+    return render(request, 'marketplace/_product_variant_detail.html', {
+        'product': product,
+        'config': _get_store_config(),
+    })
