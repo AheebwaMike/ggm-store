@@ -2,8 +2,12 @@ import json
 import logging
 import re
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from functools import wraps
+from zipfile import BadZipFile
+
+import openpyxl
+from openpyxl.utils.exceptions import InvalidFileException
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -488,6 +492,123 @@ def staff_settings(request):
             return redirect('staff_settings')
 
     return render(request, 'marketplace/staff_settings.html', {'config': config})
+
+
+@login_required
+@require_POST
+def staff_upload_stock(request):
+    stock_file = request.FILES.get('stock_file')
+    if stock_file is None:
+        messages.error(request, 'No file uploaded.')
+        return redirect('staff_settings')
+    if not stock_file.name.lower().endswith('.xlsx'):
+        messages.error(request, 'Please upload an Excel (.xlsx) file.')
+        return redirect('staff_settings')
+
+    try:
+        workbook = openpyxl.load_workbook(
+            stock_file,
+            data_only=True,
+            read_only=True,
+        )
+    except (BadZipFile, InvalidFileException, OSError, ValueError) as exc:
+        logger.warning('Unable to open uploaded stock workbook: %s', exc)
+        messages.error(request, 'Could not read the uploaded Excel file.')
+        return redirect('staff_settings')
+
+    try:
+        try:
+            worksheet = workbook['StockSummary']
+        except KeyError:
+            messages.error(
+                request,
+                "The uploaded file must contain a 'StockSummary' worksheet.",
+            )
+            return redirect('staff_settings')
+
+        header_row = None
+        for row_number, row in enumerate(
+            worksheet.iter_rows(min_row=1, max_row=30, values_only=True),
+            start=1,
+        ):
+            if row and str(row[0]).strip() == 'Product Code':
+                header_row = row_number
+                break
+
+        if header_row is None:
+            messages.error(
+                request,
+                "Could not find 'Product Code' header in the uploaded file.",
+            )
+            return redirect('staff_settings')
+
+        stock_data = {}
+        skipped_count = 0
+        quantity_field = forms.DecimalField(max_digits=10, decimal_places=2)
+        for row in worksheet.iter_rows(
+            min_row=header_row + 1,
+            values_only=True,
+        ):
+            if not row or len(row) <= 3:
+                continue
+
+            code = row[0]
+            if code is None or not str(code).strip():
+                continue
+
+            product_code = str(code).strip()
+            if product_code.startswith(('Product Group', 'Total')):
+                continue
+
+            raw_quantity = row[3]
+            if isinstance(raw_quantity, str):
+                raw_quantity = raw_quantity.replace(',', '').strip()
+            if raw_quantity in (None, ''):
+                skipped_count += 1
+                continue
+
+            try:
+                quantity = quantity_field.clean(raw_quantity)
+            except (ValidationError, InvalidOperation, TypeError, ValueError):
+                skipped_count += 1
+                continue
+            stock_data[product_code] = quantity
+    finally:
+        workbook.close()
+
+    updated_products = []
+    with transaction.atomic():
+        products = Product.objects.filter(code__in=stock_data)
+        for product in products:
+            new_quantity = stock_data[product.code]
+            new_is_active = (
+                False if new_quantity <= 0 else not product.manually_disabled
+            )
+            if (
+                product.stock_quantity != new_quantity
+                or product.is_active != new_is_active
+            ):
+                product.stock_quantity = new_quantity
+                product.is_active = new_is_active
+                updated_products.append(product)
+
+        if updated_products:
+            Product.objects.bulk_update(
+                updated_products,
+                ['stock_quantity', 'is_active'],
+                batch_size=500,
+            )
+
+    messages.success(
+        request,
+        f'Successfully updated stock for {len(updated_products)} products.',
+    )
+    if skipped_count:
+        messages.warning(
+            request,
+            f'Skipped {skipped_count} stock row(s) with invalid quantities.',
+        )
+    return redirect('staff_settings')
 
 
 def order_success(request, order_id):

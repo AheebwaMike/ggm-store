@@ -25,5 +25,6 @@ urlpatterns = [
     path('staff/stock/<int:product_id>/toggle/', views.staff_toggle_stock, name='staff_toggle_stock'),
     path('staff/manifest/', views.staff_manifest, name='staff_manifest'),
     path('staff/settings/', views.staff_settings, name='staff_settings'),
+    path('staff/settings/upload-stock/', views.staff_upload_stock, name='staff_upload_stock'),
     path('owner/', views.owner_dashboard, name='owner_dashboard'),
 ]
