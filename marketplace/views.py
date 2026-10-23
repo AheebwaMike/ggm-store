@@ -1,9 +1,11 @@
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
+from functools import wraps
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.http import HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
@@ -86,6 +88,7 @@ def home(request):
             selling_price__gt=0,
         ).order_by('name')[:50]
 
+    config = _get_store_config()
     return render(request, 'marketplace/home.html', {
         'groups': groups,
         'query': query,
@@ -93,6 +96,7 @@ def home(request):
         'current_customer': current_customer,
         'frequent_products': frequent_products,
         'featured_products': featured_products,
+        'config': config,
     })
 
 
@@ -104,6 +108,7 @@ def product_list(request, group_id):
     return render(request, 'marketplace/product_list.html', {
         'group': group,
         'products': products,
+        'config': _get_store_config(),
     })
 
 
@@ -116,6 +121,9 @@ def cart_count(request):
 @require_POST
 def add_to_cart(request, product_id):
     """Add one unit of the product to the cart. Responds with new count + HTMX trigger."""
+    if not _get_store_config().is_open:
+        return HttpResponseForbidden("Store is closed")
+
     product = get_object_or_404(Product, id=product_id, is_active=True)
     cart = _get_cart(request)
     key = str(product.id)
@@ -133,6 +141,18 @@ def add_to_cart(request, product_id):
 def _get_store_config():
     config, _ = StoreConfig.objects.get_or_create(pk=1)
     return config
+
+
+def store_open_required(view_func):
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        config = _get_store_config()
+        if not config.is_open:
+            messages.error(request, config.closed_message)
+            return redirect('cart_view')
+        return view_func(request, *args, **kwargs)
+
+    return wrapped_view
 
 
 def _calculate_delivery_fee(subtotal, apartment=None, config=None):
@@ -199,6 +219,9 @@ def cart_view(request):
 @require_POST
 def cart_update(request, product_id):
     action = request.POST.get('action', 'inc')
+    if action == 'inc' and not _get_store_config().is_open:
+        return HttpResponseForbidden("Store is closed")
+
     cart = _get_cart(request)
     key = str(product_id)
 
@@ -227,6 +250,7 @@ def cart_update(request, product_id):
     return response
 
 
+@store_open_required
 def checkout(request):
     apartment_id = request.POST.get('apartment') or request.GET.get('apartment')
     items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(
@@ -387,6 +411,10 @@ def staff_settings(request):
         else:
             for field, value in values.items():
                 setattr(config, field, value)
+            config.closed_message = request.POST.get(
+                'closed_message',
+                config.closed_message,
+            )[:255]
             config.save()
             messages.success(request, 'Settings updated successfully.')
             return redirect('staff_settings')
@@ -460,6 +488,7 @@ def staff_orders(request):
         'confirmed_count': Order.objects.filter(status='confirmed').count(),
         'packed_count': Order.objects.filter(status='packed').count(),
         'delivered_count': Order.objects.filter(status='delivered').count(),
+        'config': _get_store_config(),
     }
     template = (
         'marketplace/_staff_order_list.html'
@@ -472,6 +501,19 @@ def staff_orders(request):
             'staffOrdersUpdated': {'newCount': context['new_count']},
         })
     return response
+
+
+@staff_member_required
+@require_POST
+def staff_toggle_store_status(request):
+    config = _get_store_config()
+    config.is_open = not config.is_open
+    config.save(update_fields=['is_open'])
+    return render(
+        request,
+        'marketplace/_store_status_banner.html',
+        {'config': config},
+    )
 
 
 @login_required

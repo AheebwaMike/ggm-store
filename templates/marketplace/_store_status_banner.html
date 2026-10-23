@@ -1,0 +1,25 @@
+<div id="store-status-banner" class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl shadow-sm border {% if config.is_open %}bg-green-50 border-green-200{% else %}bg-red-50 border-red-200{% endif %}">
+    <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center {% if config.is_open %}bg-green-100 text-green-600{% else %}bg-red-100 text-red-600{% endif %}">
+            <i data-lucide="store" class="w-5 h-5"></i>
+        </div>
+        <div>
+            <h2 class="font-bold {% if config.is_open %}text-green-800{% else %}text-red-800{% endif %}">
+                Store is currently {% if config.is_open %}OPEN{% else %}CLOSED{% endif %}
+            </h2>
+            <p class="text-xs {% if config.is_open %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if config.is_open %}Accepting new orders.{% else %}Customers cannot place new orders.{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <button hx-post="{% url 'staff_toggle_store_status' %}"
+            hx-target="#store-status-banner"
+            hx-swap="outerHTML"
+            hx-on::after-swap="if (window.lucide) lucide.createIcons()"
+            class="px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2
+            {% if config.is_open %}bg-white text-green-700 border border-green-200 hover:bg-green-50{% else %}bg-green-600 text-white hover:bg-green-700{% endif %}">
+        <i data-lucide="power" class="w-4 h-4"></i>
+        {% if config.is_open %}Close Store{% else %}Open Store{% endif %}
+    </button>
+</div>

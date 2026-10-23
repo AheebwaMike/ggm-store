@@ -69,6 +69,15 @@ class StoreConfig(models.Model):
         default=0.00,
         help_text="Minimum cart total to allow checkout (0 means no limit)",
     )
+    is_open = models.BooleanField(
+        default=True,
+        help_text="Toggle to stop accepting new orders",
+    )
+    closed_message = models.CharField(
+        max_length=255,
+        default="We are currently closed. Please check back later or order via WhatsApp.",
+        help_text="Message shown to customers when closed",
+    )
 
     class Meta:
         verbose_name = "Store Configuration"

@@ -34,13 +34,21 @@
                             <i data-lucide="minus" class="w-3.5 h-3.5"></i>
                         </button>
                         <span class="w-6 text-center font-medium text-sm text-slate-800">{{ item.quantity }}</span>
-                        <button hx-post="{% url 'cart_update' item.product.id %}"
-                                hx-vals='{"action":"inc"}'
-                                hx-target="#cart-body" hx-swap="innerHTML"
-                                class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white hover:shadow-sm text-slate-600 transition-all active:scale-95"
-                                aria-label="Increase {{ item.product.name }} quantity">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                        </button>
+                        {% if config.is_open %}
+                            <button hx-post="{% url 'cart_update' item.product.id %}"
+                                    hx-vals='{"action":"inc"}'
+                                    hx-target="#cart-body" hx-swap="innerHTML"
+                                    class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white hover:shadow-sm text-slate-600 transition-all active:scale-95"
+                                    aria-label="Increase {{ item.product.name }} quantity">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            </button>
+                        {% else %}
+                            <button type="button" disabled
+                                    class="w-7 h-7 rounded-full flex items-center justify-center text-slate-300 cursor-not-allowed"
+                                    aria-label="Store is closed">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            </button>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -71,12 +79,18 @@
                 <span class="text-2xl font-bold text-orange-600">UGX {{ grand_total|floatformat:0 }}</span>
             </div>
         </div>
+        {% if config.is_open %}
         <a href="{% url 'checkout' %}"
            class="flex items-center justify-center w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-sm transition-all active:scale-[0.98] {% if subtotal < config.minimum_order_value %}opacity-50 cursor-not-allowed{% endif %}"
            {% if subtotal < config.minimum_order_value %}aria-disabled="true" title="Add items to meet the minimum order value"{% endif %}>
             Proceed to Checkout
             <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
         </a>
+        {% else %}
+        <button disabled class="flex items-center justify-center w-full bg-slate-300 text-slate-500 font-bold py-3.5 rounded-xl cursor-not-allowed">
+            Store is Closed
+        </button>
+        {% endif %}
     </div>
 
 {% else %}

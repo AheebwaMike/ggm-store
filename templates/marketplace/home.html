@@ -3,6 +3,16 @@
 {% block title %}Home - GGM Store{% endblock %}
 
 {% block content %}
+{% if not config.is_open %}
+<div class="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+    <i data-lucide="store" class="w-6 h-6 text-red-500 shrink-0 mt-0.5"></i>
+    <div>
+        <h2 class="font-bold text-red-800">We are currently closed</h2>
+        <p class="text-sm text-red-600 mt-1">{{ config.closed_message }}</p>
+    </div>
+</div>
+{% endif %}
+
 <div class="mb-8">
     <form method="get" action="{% url 'home' %}" class="relative group">
         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -40,6 +50,7 @@
                     <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
                     <p class="text-orange-600 font-bold mt-1">UGX {{ product.selling_price|floatformat:0 }}</p>
                 </div>
+                {% if config.is_open %}
                 <button
                     hx-post="{% url 'add_to_cart' product.id %}"
                     hx-swap="none"
@@ -47,6 +58,9 @@
                     aria-label="Add {{ product.name }} to cart">
                     <i data-lucide="plus" class="w-5 h-5"></i>
                 </button>
+                {% else %}
+                <button disabled class="bg-slate-200 text-slate-400 cursor-not-allowed text-sm font-medium px-3 py-2 rounded-lg shrink-0">Closed</button>
+                {% endif %}
             </div>
         {% empty %}
             <div class="col-span-full py-12 text-center bg-white rounded-2xl shadow-sm border border-slate-100">
@@ -83,6 +97,7 @@
                 </div>
                 <div class="mt-2 flex items-end justify-between">
                     <p class="text-orange-600 font-bold text-sm">UGX {{ product.selling_price|floatformat:0 }}</p>
+                    {% if config.is_open %}
                     <button
                         hx-post="{% url 'add_to_cart' product.id %}"
                         hx-swap="none"
@@ -90,6 +105,9 @@
                         aria-label="Add {{ product.name }} to cart">
                         <i data-lucide="plus" class="w-4 h-4"></i>
                     </button>
+                    {% else %}
+                    <button disabled class="bg-slate-200 text-slate-400 cursor-not-allowed text-xs font-medium px-2 py-1 rounded-lg shrink-0">Closed</button>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -122,6 +140,7 @@
                 </div>
                 <div class="mt-2 flex items-end justify-between">
                     <p class="text-orange-600 font-bold text-sm">UGX {{ product.selling_price|floatformat:0 }}</p>
+                    {% if config.is_open %}
                     <button
                         hx-post="{% url 'add_to_cart' product.id %}"
                         hx-swap="none"
@@ -129,6 +148,9 @@
                         aria-label="Add {{ product.name }} to cart">
                         <i data-lucide="plus" class="w-4 h-4"></i>
                     </button>
+                    {% else %}
+                    <button disabled class="bg-slate-200 text-slate-400 cursor-not-allowed text-xs font-medium px-2 py-1 rounded-lg shrink-0">Closed</button>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}

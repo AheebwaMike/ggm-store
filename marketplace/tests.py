@@ -5,7 +5,15 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
-from .models import Apartment, Customer, Order, OrderItem, Product, StoreConfig
+from .models import (
+    Apartment,
+    Customer,
+    Order,
+    OrderItem,
+    Product,
+    ProductGroup,
+    StoreConfig,
+)
 
 
 class OwnerDashboardTests(TestCase):
@@ -440,3 +448,105 @@ class LowStockAlertTests(TestCase):
             [self.low_stock_product],
         )
         self.assertEqual(response.context['filter_type'], 'low_stock')
+
+
+class StoreStatusTests(TestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(
+            username='store-status-staff',
+            password='test-password',
+            is_staff=True,
+        )
+        self.customer = Customer.objects.create(phone_number='0709876543')
+        self.group = ProductGroup.objects.create(name='Test Group')
+        self.product = Product.objects.create(
+            code='STORE001',
+            name='Store Status Product',
+            group=self.group,
+            selling_price=Decimal('1000.00'),
+        )
+        self.config = StoreConfig.objects.create()
+        session = self.client.session
+        session['cart'] = {str(self.product.pk): 1}
+        session.save()
+
+    def test_staff_can_toggle_store_status_via_post(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post('/staff/toggle-store/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Store is currently CLOSED')
+        self.config.refresh_from_db()
+        self.assertFalse(self.config.is_open)
+
+        response = self.client.post('/staff/toggle-store/')
+        self.assertContains(response, 'Store is currently OPEN')
+        self.config.refresh_from_db()
+        self.assertTrue(self.config.is_open)
+
+    def test_non_staff_cannot_toggle_store_status(self):
+        user = get_user_model().objects.create_user(
+            username='store-status-customer',
+            password='test-password',
+        )
+        self.client.force_login(user)
+
+        response = self.client.post('/staff/toggle-store/')
+
+        self.assertRedirects(
+            response,
+            '/admin/login/?next=%2Fstaff%2Ftoggle-store%2F',
+        )
+        self.config.refresh_from_db()
+        self.assertTrue(self.config.is_open)
+
+    def test_closed_store_blocks_cart_add_checkout_and_disables_controls(self):
+        self.config.is_open = False
+        self.config.closed_message = 'Closed for maintenance.'
+        self.config.save()
+
+        home_response = self.client.get('/?q=STORE001')
+        self.assertContains(home_response, 'We are currently closed')
+        self.assertContains(home_response, 'Closed for maintenance.')
+        self.assertContains(home_response, 'disabled')
+        self.assertContains(home_response, 'Closed')
+        self.assertNotContains(home_response, 'hx-post="/cart/add/')
+
+        group_response = self.client.get(f'/group/{self.group.pk}/')
+        self.assertContains(group_response, 'disabled')
+        self.assertContains(group_response, 'Closed')
+
+        cart_response = self.client.get('/cart/')
+        self.assertContains(cart_response, 'Store is Closed')
+        self.assertNotContains(cart_response, 'href="/checkout/"')
+
+        add_response = self.client.post(f'/cart/add/{self.product.pk}/')
+        self.assertEqual(add_response.status_code, 403)
+        self.assertEqual(self.client.session['cart'], {str(self.product.pk): 1})
+
+        checkout_response = self.client.get('/checkout/', follow=True)
+        self.assertEqual(checkout_response.redirect_chain, [('/cart/', 302)])
+        self.assertContains(checkout_response, 'Closed for maintenance.')
+        checkout_post_response = self.client.post('/checkout/', {
+            'phone': '0709876543',
+            'apartment': '',
+            'payment_method': 'cash',
+        })
+        self.assertEqual(checkout_post_response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
+
+        cart_update_response = self.client.post(
+            f'/cart/update/{self.product.pk}/',
+            {'action': 'inc'},
+        )
+        self.assertEqual(cart_update_response.status_code, 403)
+        self.assertEqual(self.client.session['cart'], {str(self.product.pk): 1})
+
+    def test_staff_orders_shows_store_status_banner(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get('/staff/')
+
+        self.assertContains(response, 'Store is currently OPEN')
+        self.assertContains(response, 'hx-post="/staff/toggle-store/"')

@@ -24,6 +24,7 @@
                 <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
                 <p class="text-orange-600 font-bold mt-1">UGX {{ product.selling_price|floatformat:0 }}</p>
             </div>
+            {% if config.is_open %}
             <button
                 hx-post="{% url 'add_to_cart' product.id %}"
                 hx-swap="none"
@@ -31,6 +32,9 @@
                 aria-label="Add {{ product.name }} to cart">
                 <i data-lucide="plus" class="w-5 h-5"></i>
             </button>
+            {% else %}
+            <button disabled class="bg-slate-200 text-slate-400 cursor-not-allowed text-sm font-medium px-3 py-2 rounded-lg shrink-0">Closed</button>
+            {% endif %}
         </div>
     {% empty %}
         <p class="col-span-full text-slate-500">No products available in this category right now.</p>

@@ -15,6 +15,7 @@ urlpatterns = [
     path('my-orders/', views.customer_orders, name='customer_orders'),
     path('my-orders/<int:order_id>/', views.customer_order_detail, name='customer_order_detail'),
     path('staff/', views.staff_orders, name='staff_orders'),
+    path('staff/toggle-store/', views.staff_toggle_store_status, name='staff_toggle_store_status'),
     path('staff/order/<int:order_id>/', views.staff_order_detail, name='staff_order_detail'),
     path('staff/order/<int:order_id>/action/', views.staff_order_action, name='staff_order_action'),
     path('staff/order/<int:order_id>/slip/', views.staff_order_slip, name='staff_order_slip'),
