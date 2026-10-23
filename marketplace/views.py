@@ -57,6 +57,41 @@ def _cart_total_items(cart):
     return sum(int(q) for q in cart.values())
 
 
+def _group_products(queryset):
+    grouped = {}
+    display_items = []
+
+    for product in queryset:
+        if product.parent_group:
+            grouped.setdefault(product.parent_group, []).append(product)
+            continue
+
+        display_items.append({
+            'product': product,
+            'is_group': False,
+            'min_price': product.selling_price,
+            'max_price': product.selling_price,
+            'variant_count': 0,
+        })
+
+    for parent_name, variants in grouped.items():
+        variants.sort(key=lambda variant: (variant.selling_price, variant.name))
+        representative = variants[0]
+        display_items.append({
+            'product': representative,
+            'is_group': True,
+            'min_price': variants[0].selling_price,
+            'max_price': variants[-1].selling_price,
+            'variant_count': len(variants),
+            'parent_name': parent_name,
+        })
+
+    display_items.sort(
+        key=lambda item: (item.get('parent_name') or item['product'].name).casefold()
+    )
+    return display_items
+
+
 # ---------- Views ----------
 @ensure_csrf_cookie
 def home(request):
@@ -94,11 +129,12 @@ def home(request):
         ).order_by('-times_ordered')[:6]
 
     if query:
-        search_results = Product.objects.filter(
+        raw_products = Product.objects.filter(
             Q(name__icontains=query) | Q(code__icontains=query),
             is_active=True,
             selling_price__gt=0,
         ).order_by('name')[:50]
+        search_results = _group_products(raw_products)[:50]
 
     config = _get_store_config()
     return render(request, 'marketplace/home.html', {
@@ -114,9 +150,10 @@ def home(request):
 
 def product_list(request, group_id):
     group = get_object_or_404(ProductGroup, id=group_id)
-    products = Product.objects.filter(
+    raw_products = Product.objects.filter(
         group=group, is_active=True, selling_price__gt=0
     ).order_by('name')
+    products = _group_products(raw_products)
     return render(request, 'marketplace/product_list.html', {
         'group': group,
         'products': products,

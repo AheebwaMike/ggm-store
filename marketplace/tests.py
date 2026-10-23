@@ -719,6 +719,20 @@ class ProductDetailTests(TestCase):
             home_response,
             f'href="/product/{self.small_variant.pk}/"',
         )
+        self.assertContains(home_response, '2 sizes/flavours available')
+        self.assertContains(home_response, 'From UGX 5000')
+        self.assertEqual(
+            home_response.context['search_results'][0]['variant_count'],
+            2,
+        )
+        self.assertContains(
+            home_response,
+            'text-xs font-bold px-3 py-2 rounded-xl',
+        )
+        self.assertNotContains(
+            home_response,
+            f'hx-post="/cart/add/{self.small_variant.pk}/"',
+        )
 
         category_response = self.client.get(
             reverse('product_list', args=[self.group.pk]),
@@ -726,6 +740,34 @@ class ProductDetailTests(TestCase):
         self.assertContains(
             category_response,
             f'href="/product/{self.small_variant.pk}/"',
+        )
+        self.assertContains(category_response, '2 options available')
+        self.assertContains(category_response, 'From UGX 5000')
+        self.assertEqual(
+            category_response.context['products'][0]['variant_count'],
+            2,
+        )
+
+    def test_standalone_product_keeps_direct_add_button(self):
+        standalone = Product.objects.create(
+            code='PDP004',
+            name='Standalone Soap',
+            group=self.group,
+            selling_price=Decimal('2500.00'),
+            stock_quantity=Decimal('5.00'),
+            is_active=True,
+        )
+
+        response = self.client.get('/?q=Standalone')
+
+        self.assertContains(response, 'UGX 2500')
+        self.assertContains(
+            response,
+            f'hx-post="/cart/add/{standalone.pk}/"',
+        )
+        self.assertNotContains(
+            response,
+            'text-xs font-bold px-3 py-2 rounded-xl',
         )
 
     def test_add_to_cart_from_variant_adds_that_product(self):

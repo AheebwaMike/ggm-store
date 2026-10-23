@@ -71,30 +71,41 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {% for product in search_results %}
+        {% for item in search_results %}
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 active:bg-slate-50 transition-colors">
                 <div class="w-16 h-16 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden border border-slate-100">
-                    {% if product.image %}
-                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                    {% if item.product.image %}
+                        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover">
                     {% else %}
                         <i data-lucide="shopping-basket" class="w-8 h-8 text-orange-200"></i>
                     {% endif %}
                 </div>
                 <div class="flex-1 min-w-0 pr-2">
-                    <a href="{% url 'product_detail' product.id %}" class="font-medium text-slate-800 text-sm truncate hover:text-orange-600 transition-colors">{{ product.name }}</a>
-                    <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
-                    <p class="text-orange-600 font-bold mt-1">UGX {{ product.selling_price|floatformat:0 }}</p>
+                    <a href="{% url 'product_detail' item.product.id %}" class="font-medium text-slate-800 text-sm truncate hover:text-orange-600 transition-colors block">
+                        {{ item.parent_name|default:item.product.name }}
+                    </a>
+                    {% if item.is_group %}
+                        <p class="text-[11px] text-orange-600 font-bold mt-0.5">{{ item.variant_count }} sizes/flavours available</p>
+                        <p class="text-orange-600 font-bold mt-1">From UGX {{ item.min_price|floatformat:0 }}</p>
+                    {% else %}
+                        <p class="text-[11px] text-slate-400 mt-0.5">{{ item.product.unit.name|default:"PCS" }}</p>
+                        <p class="text-orange-600 font-bold mt-1">UGX {{ item.product.selling_price|floatformat:0 }}</p>
+                    {% endif %}
                 </div>
-                {% if config.is_open %}
-                <button
-                    hx-post="{% url 'add_to_cart' product.id %}"
-                    hx-swap="none"
-                    class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shrink-0 shadow-sm"
-                    aria-label="Add {{ product.name }} to cart">
-                    <i data-lucide="plus" class="w-5 h-5"></i>
-                </button>
+                {% if item.is_group %}
+                    <a href="{% url 'product_detail' item.product.id %}" class="bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0 transition-colors shadow-sm">
+                        Select
+                    </a>
                 {% else %}
-                <button disabled class="bg-slate-200 text-slate-400 cursor-not-allowed text-sm font-medium px-3 py-2 rounded-lg shrink-0">Closed</button>
+                    {% if config.is_open %}
+                        <button hx-post="{% url 'add_to_cart' item.product.id %}" hx-swap="none" class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shrink-0 shadow-sm">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                        </button>
+                    {% else %}
+                        <button disabled aria-label="Closed: store is not accepting orders" class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 cursor-not-allowed">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    {% endif %}
                 {% endif %}
             </div>
         {% empty %}
