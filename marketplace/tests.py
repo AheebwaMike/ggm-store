@@ -575,6 +575,72 @@ class StaffStockUploadTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
 
+class AutoGroupProductsCommandTests(TestCase):
+    def setUp(self):
+        self.sugar = Product.objects.create(
+            code='VARIANT001',
+            name='KAKIRA SUGAR 25KG',
+        )
+        self.chilli = Product.objects.create(
+            code='VARIANT002',
+            name='SUMZ CHILLI',
+        )
+        self.medium = Product.objects.create(
+            code='VARIANT003',
+            name='BASIN MEDIUM',
+        )
+        self.unmatched = Product.objects.create(
+            code='VARIANT004',
+            name='PLAIN SOAP',
+        )
+        self.manually_grouped = Product.objects.create(
+            code='VARIANT005',
+            name='KAKIRA SUGAR 50KG',
+            parent_group='Manual Sugar Group',
+            variant_label='Manual',
+        )
+        self.empty_group = Product.objects.create(
+            code='VARIANT006',
+            name='KAKIRA SUGAR 10KG',
+            parent_group='',
+        )
+
+    def test_command_groups_matching_names_and_preserves_manual_values(self):
+        output = StringIO()
+        call_command('auto_group_products', stdout=output)
+
+        self.sugar.refresh_from_db()
+        self.chilli.refresh_from_db()
+        self.medium.refresh_from_db()
+        self.unmatched.refresh_from_db()
+        self.manually_grouped.refresh_from_db()
+        self.empty_group.refresh_from_db()
+
+        self.assertEqual(self.sugar.parent_group, 'Kakira Sugar')
+        self.assertEqual(self.sugar.variant_label, '25KG')
+        self.assertEqual(self.chilli.parent_group, 'Sumz')
+        self.assertEqual(self.chilli.variant_label, 'Chilli')
+        self.assertEqual(self.medium.parent_group, 'Basin')
+        self.assertEqual(self.medium.variant_label, 'MEDIUM')
+        self.assertIsNone(self.unmatched.parent_group)
+        self.assertEqual(
+            self.manually_grouped.parent_group,
+            'Manual Sugar Group',
+        )
+        self.assertEqual(self.manually_grouped.variant_label, 'Manual')
+        self.assertEqual(self.empty_group.parent_group, 'Kakira Sugar')
+        self.assertEqual(self.empty_group.variant_label, '10KG')
+        self.assertIn('Successfully auto-grouped 4 products.', output.getvalue())
+
+    def test_command_is_idempotent_for_existing_groups(self):
+        call_command('auto_group_products', stdout=StringIO())
+        output = StringIO()
+
+        call_command('auto_group_products', stdout=output)
+
+        self.assertIn('Successfully auto-grouped 0 products.', output.getvalue())
+
+
 class WhatsAppIntegrationTests(TestCase):
     def setUp(self):
         self.staff = get_user_model().objects.create_user(

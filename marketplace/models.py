@@ -16,6 +16,19 @@ class Unit(models.Model):
 class Product(models.Model):
     code = models.CharField(max_length=50, unique=True, db_index=True) # e.g., "000001"
     name = models.CharField(max_length=255)
+    parent_group = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Items with the same parent group will be grouped together (e.g., 'Kakira Sugar')",
+    )
+    variant_label = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="The specific variant shown to the customer (e.g., '1KG', '25KG', 'Chilli')",
+    )
     group = models.ForeignKey(ProductGroup, on_delete=models.SET_NULL, null=True, blank=True)
     unit = models.ForeignKey(Unit, on_delete=models.SET_NULL, null=True, blank=True)
     

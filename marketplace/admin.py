@@ -30,6 +30,8 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = (
         'code',
         'name',
+        'parent_group',
+        'variant_label',
         'group',
         'unit',
         'selling_price',
@@ -38,8 +40,9 @@ class ProductAdmin(admin.ModelAdmin):
         'is_active',
         'image_preview',
     )
-    list_filter = ('is_active', 'group', 'unit', 'low_stock_threshold')
-    search_fields = ('code', 'name')
+    list_editable = ('parent_group', 'variant_label')
+    list_filter = ('is_active', 'group', 'unit', 'parent_group', 'low_stock_threshold')
+    search_fields = ('code', 'name', 'parent_group')
     readonly_fields = ('image_preview',)
 
     def image_preview(self, obj):
