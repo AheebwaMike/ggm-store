@@ -65,3 +65,51 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(request))
   );
 });
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (error) {
+    data = {
+      title: 'GGM Store',
+      body: event.data ? event.data.text() : '',
+    };
+  }
+
+  const options = {
+    body: data.body || '',
+    icon: '/static/icons/icon-192.png',
+    badge: '/static/icons/icon-192.png',
+    data: {
+      url: data.url || '/',
+    },
+  };
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'GGM Store', options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    let target;
+    try {
+      target = new URL(event.notification.data?.url || '/', self.location.origin);
+      if (target.origin !== self.location.origin) target = new URL('/', self.location.origin);
+    } catch (error) {
+      target = new URL('/', self.location.origin);
+    }
+
+    const windowClients = await clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    });
+    for (const client of windowClients) {
+      if (client.url === target.href && 'focus' in client) {
+        return client.focus();
+      }
+    }
+    return clients.openWindow ? clients.openWindow(target.href) : undefined;
+  })());
+});

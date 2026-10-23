@@ -6,7 +6,8 @@ from functools import wraps
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.http import HttpResponseForbidden
+from django.core.validators import URLValidator
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
@@ -26,6 +27,7 @@ from .models import (
     OrderItem,
     Product,
     ProductGroup,
+    PushSubscription,
     StoreConfig,
     WhatsAppNotificationLog,
 )
@@ -675,6 +677,80 @@ def service_worker(request):
     response['Service-Worker-Allowed'] = '/'
     response['Cache-Control'] = 'no-cache'
     return response
+
+
+@require_POST
+def save_push_subscription(request):
+    if request.content_type != 'application/json':
+        return JsonResponse(
+            {'status': 'error', 'message': 'Expected application/json.'},
+            status=415,
+        )
+    if len(request.body) > 4096:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Subscription payload is too large.'},
+            status=400,
+        )
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid JSON.'},
+            status=400,
+        )
+    if not isinstance(data, dict):
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid subscription data.'},
+            status=400,
+        )
+
+    endpoint = data.get('endpoint')
+    keys = data.get('keys')
+    if not isinstance(endpoint, str) or not isinstance(keys, dict):
+        return JsonResponse(
+            {'status': 'error', 'message': 'Missing subscription keys.'},
+            status=400,
+        )
+
+    p256dh = keys.get('p256dh')
+    auth = keys.get('auth')
+    if (
+        not endpoint
+        or len(endpoint) > 500
+        or not isinstance(p256dh, str)
+        or not 1 <= len(p256dh) <= 200
+        or not isinstance(auth, str)
+        or not 1 <= len(auth) <= 100
+    ):
+        return JsonResponse(
+            {'status': 'error', 'message': 'Missing or invalid subscription keys.'},
+            status=400,
+        )
+
+    try:
+        URLValidator(schemes=['https'])(endpoint)
+    except ValidationError:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid subscription endpoint.'},
+            status=400,
+        )
+
+    customer_id = request.session.get('customer_id')
+    customer = (
+        Customer.objects.filter(id=customer_id).first()
+        if customer_id
+        else None
+    )
+    PushSubscription.objects.update_or_create(
+        endpoint=endpoint,
+        defaults={
+            'p256dh': p256dh,
+            'auth': auth,
+            'customer': customer,
+        },
+    )
+    return JsonResponse({'status': 'success'})
 
 
 @staff_member_required

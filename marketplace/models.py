@@ -105,6 +105,25 @@ class Customer(models.Model):
     def __str__(self):
         return f"{self.name} ({self.phone_number})"
 
+
+class PushSubscription(models.Model):
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='push_subscriptions',
+    )
+    endpoint = models.URLField(max_length=500, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        customer_name = self.customer.name if self.customer else 'Anonymous'
+        return f"Subscription for {customer_name} ({self.endpoint[:30]}...)"
+
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('new', 'New Order'),

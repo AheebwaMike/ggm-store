@@ -1,9 +1,16 @@
+import json
 from datetime import timedelta
 from decimal import Decimal
+from io import StringIO
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command, CommandError
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
+from requests import Response
+from pywebpush import WebPushException
 
 from .models import (
     Apartment,
@@ -12,6 +19,7 @@ from .models import (
     OrderItem,
     Product,
     ProductGroup,
+    PushSubscription,
     StoreConfig,
     WhatsAppNotificationLog,
 )
@@ -451,6 +459,152 @@ class WhatsAppIntegrationTests(TestCase):
         )
         self.assertContains(success_response, 'WhatsApp Us')
         self.assertContains(success_response, 'https://wa.me/256770000000?text=')
+
+
+class PushSubscriptionTests(TestCase):
+    def setUp(self):
+        self.customer = Customer.objects.create(
+            phone_number='0707654321',
+            name='Push Customer',
+        )
+        session = self.client.session
+        session['customer_id'] = self.customer.pk
+        session.save()
+        self.subscription_data = {
+            'endpoint': 'https://push.example.test/subscription/unique',
+            'keys': {
+                'p256dh': 'public-key',
+                'auth': 'auth-secret',
+            },
+        }
+        self.subscribe_url = reverse('save_push_subscription')
+
+    def test_subscription_is_saved_for_current_customer(self):
+        response = self.client.post(
+            self.subscribe_url,
+            data=json.dumps(self.subscription_data),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        subscription = PushSubscription.objects.get()
+        self.assertEqual(subscription.customer, self.customer)
+        self.assertEqual(subscription.endpoint, self.subscription_data['endpoint'])
+        self.assertEqual(subscription.p256dh, 'public-key')
+        self.assertEqual(subscription.auth, 'auth-secret')
+
+    def test_existing_subscription_is_updated(self):
+        self.client.post(
+            self.subscribe_url,
+            data=json.dumps(self.subscription_data),
+            content_type='application/json',
+        )
+        self.subscription_data['keys']['auth'] = 'new-auth-secret'
+        response = self.client.post(
+            self.subscribe_url,
+            data=json.dumps(self.subscription_data),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(PushSubscription.objects.count(), 1)
+        self.assertEqual(
+            PushSubscription.objects.get().auth,
+            'new-auth-secret',
+        )
+
+    def test_invalid_subscription_payload_is_rejected(self):
+        invalid_payloads = (
+            ('{invalid json', 'application/json'),
+            (json.dumps({'endpoint': 'https://push.example.test/no-keys'}), 'application/json'),
+            (
+                json.dumps({
+                    **self.subscription_data,
+                    'endpoint': 'http://push.example.test/insecure',
+                }),
+                'application/json',
+            ),
+            (json.dumps(self.subscription_data), 'text/plain'),
+        )
+
+        for payload, content_type in invalid_payloads:
+            with self.subTest(content_type=content_type, payload=payload[:20]):
+                response = self.client.post(
+                    self.subscribe_url,
+                    data=payload,
+                    content_type=content_type,
+                )
+                self.assertIn(response.status_code, {400, 415})
+        self.assertFalse(PushSubscription.objects.exists())
+
+    def test_subscription_endpoint_requires_post_and_csrf(self):
+        response = self.client.get(self.subscribe_url)
+        self.assertEqual(response.status_code, 405)
+
+        csrf_client = self.client_class(enforce_csrf_checks=True)
+        response = csrf_client.post(
+            self.subscribe_url,
+            data=json.dumps(self.subscription_data),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_home_renders_push_prompt_when_public_key_is_configured(self):
+        with self.settings(VAPID_PUBLIC_KEY='public-vapid-key'):
+            response = self.client.get(reverse('home'))
+
+        self.assertContains(response, 'name="vapid-public-key"')
+        self.assertContains(response, 'public-vapid-key')
+        self.assertContains(response, 'Get order updates')
+        self.assertContains(response, 'push-subscription-url')
+
+    @patch('marketplace.management.commands.send_test_push.webpush')
+    def test_test_push_command_sends_to_all_subscriptions(self, mock_webpush):
+        PushSubscription.objects.create(
+            customer=self.customer,
+            endpoint=self.subscription_data['endpoint'],
+            p256dh='public-key',
+            auth='auth-secret',
+        )
+        output = StringIO()
+
+        with self.settings(
+            VAPID_PRIVATE_KEY='test-private-key',
+            VAPID_ADMIN_EMAIL='admin@ggmstore.com',
+        ):
+            call_command('send_test_push', stdout=output)
+
+        self.assertIn('Sent: 1, Failed: 0', output.getvalue())
+        mock_webpush.assert_called_once()
+        self.assertEqual(
+            mock_webpush.call_args.kwargs['subscription_info']['endpoint'],
+            self.subscription_data['endpoint'],
+        )
+
+    @patch('marketplace.management.commands.send_test_push.webpush')
+    def test_test_push_command_removes_gone_subscriptions(self, mock_webpush):
+        subscription = PushSubscription.objects.create(
+            customer=self.customer,
+            endpoint=self.subscription_data['endpoint'],
+            p256dh='public-key',
+            auth='auth-secret',
+        )
+        expired_response = Response()
+        expired_response.status_code = 410
+        mock_webpush.side_effect = WebPushException(
+            'Subscription expired',
+            response=expired_response,
+        )
+        output = StringIO()
+
+        with self.settings(
+            VAPID_PRIVATE_KEY='test-private-key',
+            VAPID_ADMIN_EMAIL='admin@ggmstore.com',
+        ), self.assertRaises(CommandError):
+            call_command('send_test_push', stdout=output)
+
+        self.assertFalse(PushSubscription.objects.filter(pk=subscription.pk).exists())
+        self.assertIn('Removed expired subscription', output.getvalue())
 
 
 class LowStockAlertTests(TestCase):

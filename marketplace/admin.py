@@ -9,6 +9,7 @@ from .models import (
     OrderItem,
     Product,
     ProductGroup,
+    PushSubscription,
     StoreConfig,
     Unit,
     WhatsAppNotificationLog,
@@ -85,6 +86,11 @@ class WhatsAppNotificationLogAdmin(admin.ModelAdmin):
     list_filter = ('status_sent', 'sent_at')
     search_fields = ('order__id', 'order__customer__phone_number')
     readonly_fields = ('order', 'status_sent', 'sent_at')
+
+
+@admin.register(PushSubscription)
+class PushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'customer', 'created_at')
 
 
 @admin.register(FeaturedCampaign)

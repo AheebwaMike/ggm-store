@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('sw.js', views.service_worker, name='service_worker'),
+    path('push/subscribe/', views.save_push_subscription, name='save_push_subscription'),
     path('', views.home, name='home'),
     path('group/<int:group_id>/', views.product_list, name='product_list'),
     path('cart/', views.cart_view, name='cart_view'),

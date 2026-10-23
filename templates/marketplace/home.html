@@ -3,6 +3,41 @@
 {% block title %}Home - GGM Store{% endblock %}
 
 {% block content %}
+{% if VAPID_PUBLIC_KEY %}
+<div id="push-prompt-banner" class="mb-4 bg-slate-800 text-white rounded-2xl p-4 items-center justify-between shadow-lg hidden">
+    <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <i data-lucide="bell" class="w-5 h-5"></i>
+        </div>
+        <div>
+            <p class="font-bold text-sm">Get order updates</p>
+            <p class="text-xs text-slate-300">Enable notifications to know when your order is on the way.</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-2 ml-2 shrink-0">
+        <button type="button" onclick="requestNotificationPermission()" class="bg-white text-slate-900 text-xs font-bold px-4 py-2 rounded-xl">
+            Enable
+        </button>
+        <button type="button" onclick="localStorage.setItem('push_dismissed_until', String(Date.now() + 7 * 24 * 60 * 60 * 1000)); this.closest('#push-prompt-banner').style.display='none';" aria-label="Dismiss notification prompt" class="text-white/70 hover:text-white p-1">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    </div>
+</div>
+<script>
+    if (
+        'Notification' in window &&
+        'PushManager' in window &&
+        'serviceWorker' in navigator &&
+        Notification.permission === 'default' &&
+        Date.now() >= Number(localStorage.getItem('push_dismissed_until') || 0)
+    ) {
+        const pushBanner = document.getElementById('push-prompt-banner');
+        pushBanner.classList.remove('hidden');
+        pushBanner.classList.add('flex');
+    }
+</script>
+{% endif %}
+
 {% if not config.is_open %}
 <div class="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
     <i data-lucide="store" class="w-6 h-6 text-red-500 shrink-0 mt-0.5"></i>
