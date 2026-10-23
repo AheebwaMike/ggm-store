@@ -461,6 +461,175 @@ class WhatsAppIntegrationTests(TestCase):
         self.assertContains(success_response, 'https://wa.me/256770000000?text=')
 
 
+class StaffOrderPushNotificationTests(TestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(
+            username='push-order-staff',
+            password='test-password',
+            is_staff=True,
+        )
+        self.customer = Customer.objects.create(
+            phone_number='0707654321',
+            name='Push Customer',
+        )
+        self.order = Order.objects.create(
+            customer=self.customer,
+            status='new',
+            total_amount=Decimal('12500.00'),
+        )
+        self.subscription = PushSubscription.objects.create(
+            customer=self.customer,
+            endpoint='https://push.example.test/subscription/order-update',
+            p256dh='public-key',
+            auth='auth-secret',
+        )
+        self.client.force_login(self.staff)
+        self.push_settings = self.settings(
+            VAPID_PRIVATE_KEY='test-private-key',
+            VAPID_ADMIN_EMAIL='admin@ggmstore.com',
+        )
+        self.push_settings.enable()
+        self.addCleanup(self.push_settings.disable)
+
+    @patch('marketplace.views.webpush')
+    def test_confirming_order_sends_confirmation_push(self, mock_webpush):
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/action/',
+            {'action': 'confirm', 'payment_method': 'momo'},
+        )
+
+        self.assertRedirects(response, f'/staff/order/{self.order.pk}/')
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'confirmed')
+        self.assertEqual(self.order.payment_method, 'momo')
+        mock_webpush.assert_called_once()
+        args = mock_webpush.call_args.kwargs
+        self.assertEqual(args['subscription_info']['endpoint'], self.subscription.endpoint)
+        self.assertEqual(
+            json.loads(args['data']),
+            {
+                'title': 'Order Confirmed!',
+                'body': (
+                    f'Hi Push Customer, your order #{self.order.pk} has been '
+                    'confirmed and is being packed.'
+                ),
+                'url': f'/my-orders/{self.order.pk}/',
+            },
+        )
+        self.assertEqual(args['vapid_private_key'], 'test-private-key')
+        self.assertEqual(
+            args['vapid_claims'],
+            {'sub': 'mailto:admin@ggmstore.com'},
+        )
+
+    @patch('marketplace.views.webpush')
+    def test_packing_order_sends_on_the_way_push(self, mock_webpush):
+        self.order.status = 'confirmed'
+        self.order.save(update_fields=['status'])
+
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/action/',
+            {'action': 'packed'},
+        )
+
+        self.assertRedirects(response, f'/staff/order/{self.order.pk}/')
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'packed')
+        mock_webpush.assert_called_once()
+        payload = json.loads(mock_webpush.call_args.kwargs['data'])
+        self.assertEqual(payload['title'], 'Order is on the way! 🚚')
+        self.assertEqual(
+            payload['body'],
+            f'Your order #{self.order.pk} is out for delivery. '
+            'Please have UGX 12,500 ready.',
+        )
+        self.assertEqual(payload['url'], f'/my-orders/{self.order.pk}/')
+
+    @patch('marketplace.views.webpush')
+    def test_missing_subscription_does_not_prevent_order_confirmation(
+        self,
+        mock_webpush,
+    ):
+        self.subscription.delete()
+
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/action/',
+            {'action': 'confirm', 'payment_method': 'cash'},
+        )
+
+        self.assertRedirects(response, f'/staff/order/{self.order.pk}/')
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'confirmed')
+        mock_webpush.assert_not_called()
+
+    @patch('marketplace.views.webpush')
+    def test_expired_subscription_is_removed_without_failing_order_action(
+        self,
+        mock_webpush,
+    ):
+        expired_response = Response()
+        expired_response.status_code = 410
+        mock_webpush.side_effect = WebPushException(
+            'Subscription expired',
+            response=expired_response,
+        )
+
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/action/',
+            {'action': 'confirm', 'payment_method': 'cash'},
+        )
+
+        self.assertRedirects(response, f'/staff/order/{self.order.pk}/')
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'confirmed')
+        self.assertFalse(
+            PushSubscription.objects.filter(pk=self.subscription.pk).exists()
+        )
+
+    @patch('marketplace.views.webpush')
+    def test_push_service_failure_does_not_fail_order_action(self, mock_webpush):
+        failed_response = Response()
+        failed_response.status_code = 503
+        mock_webpush.side_effect = WebPushException(
+            'Push service unavailable',
+            response=failed_response,
+        )
+
+        response = self.client.post(
+            f'/staff/order/{self.order.pk}/action/',
+            {'action': 'confirm', 'payment_method': 'cash'},
+        )
+
+        self.assertRedirects(response, f'/staff/order/{self.order.pk}/')
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'confirmed')
+        self.assertTrue(
+            PushSubscription.objects.filter(pk=self.subscription.pk).exists()
+        )
+
+    @patch('marketplace.views.webpush')
+    def test_delivery_and_cancellation_do_not_send_pushes(self, mock_webpush):
+        self.order.status = 'packed'
+        self.order.save(update_fields=['status'])
+        self.client.post(
+            f'/staff/order/{self.order.pk}/action/',
+            {'action': 'delivered'},
+        )
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'delivered')
+        mock_webpush.assert_not_called()
+
+        self.order.status = 'new'
+        self.order.save(update_fields=['status'])
+        self.client.post(
+            f'/staff/order/{self.order.pk}/action/',
+            {'action': 'cancel'},
+        )
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'cancelled')
+        mock_webpush.assert_not_called()
+
+
 class PushSubscriptionTests(TestCase):
     def setUp(self):
         self.customer = Customer.objects.create(

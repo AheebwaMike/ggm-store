@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -19,6 +20,7 @@ from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import ensure_csrf_cookie
+from pywebpush import WebPushException, webpush
 from .models import (
     Apartment,
     Customer,
@@ -31,6 +33,8 @@ from .models import (
     StoreConfig,
     WhatsAppNotificationLog,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ---------- Cart helpers ----------
@@ -145,6 +149,61 @@ def add_to_cart(request, product_id):
 def _get_store_config():
     config, _ = StoreConfig.objects.get_or_create(pk=1)
     return config
+
+
+def _send_push_to_customer(customer, title, body, url):
+    if not customer:
+        return
+
+    subscriptions = customer.push_subscriptions.all()
+    if not subscriptions.exists():
+        return
+    if not settings.VAPID_PRIVATE_KEY or not settings.VAPID_ADMIN_EMAIL:
+        logger.error('Push notifications are unavailable: VAPID settings are missing.')
+        return
+
+    payload = json.dumps({
+        'title': title,
+        'body': body,
+        'url': url,
+    })
+    for subscription in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    'endpoint': subscription.endpoint,
+                    'keys': {
+                        'p256dh': subscription.p256dh,
+                        'auth': subscription.auth,
+                    },
+                },
+                data=payload,
+                vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                vapid_claims={
+                    'sub': f'mailto:{settings.VAPID_ADMIN_EMAIL}',
+                },
+                ttl=3600,
+                timeout=10,
+            )
+        except WebPushException as exc:
+            status_code = (
+                exc.response.status_code
+                if exc.response is not None
+                else None
+            )
+            if status_code in {404, 410}:
+                subscription.delete()
+                logger.info(
+                    'Removed expired push subscription id=%s (HTTP %s).',
+                    subscription.pk,
+                    status_code,
+                )
+            else:
+                logger.warning(
+                    'Push delivery failed for subscription id=%s (HTTP %s).',
+                    subscription.pk,
+                    status_code or 'unknown',
+                )
 
 
 def store_open_required(view_func):
@@ -616,6 +675,28 @@ def staff_order_action(request, order_id):
             order.payment_method = payment_method
             update_fields.append('payment_method')
     order.save(update_fields=update_fields)
+
+    if action == 'confirm':
+        _send_push_to_customer(
+            customer=order.customer,
+            title='Order Confirmed!',
+            body=(
+                f"Hi {order.customer.name or 'there'}, your order #{order.id} "
+                'has been confirmed and is being packed.'
+            ),
+            url=f'/my-orders/{order.id}/',
+        )
+    elif action == 'packed':
+        _send_push_to_customer(
+            customer=order.customer,
+            title='Order is on the way! 🚚',
+            body=(
+                f'Your order #{order.id} is out for delivery. Please have '
+                f'UGX {order.total_amount:,.0f} ready.'
+            ),
+            url=f'/my-orders/{order.id}/',
+        )
+
     return redirect('staff_order_detail', order_id=order.id)
 
 
