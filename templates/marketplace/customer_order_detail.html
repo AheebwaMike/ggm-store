@@ -14,47 +14,7 @@
             <span class="text-sm font-medium text-slate-400">{{ order.created_at|date:"d M Y, H:i" }}</span>
         </h1>
 
-        {% if order.status == 'cancelled' %}
-            <div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
-                <i data-lucide="x-circle" class="w-8 h-8 text-red-500 mx-auto mb-2"></i>
-                <p class="text-red-700 font-bold">Order Cancelled</p>
-                <p class="text-red-500 text-sm mt-1">This order is no longer active.</p>
-            </div>
-        {% else %}
-            <div class="relative flex justify-between items-center w-full mb-8">
-                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 z-0 rounded-full"></div>
-                <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-orange-500 z-0 rounded-full transition-all duration-500"
-                     style="width: {% if order.status == 'new' %}0%{% elif order.status == 'confirmed' %}33%{% elif order.status == 'packed' %}66%{% elif order.status == 'delivered' %}100%{% endif %};"></div>
-
-                <div class="relative z-10 flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-sm {% if order.status == 'new' or order.status == 'confirmed' or order.status == 'packed' or order.status == 'delivered' %}bg-orange-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %}">
-                        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
-                    </div>
-                    <span class="text-[10px] sm:text-xs font-bold mt-2 {% if order.status == 'new' or order.status == 'confirmed' or order.status == 'packed' or order.status == 'delivered' %}text-slate-800{% else %}text-slate-400{% endif %}">Placed</span>
-                </div>
-
-                <div class="relative z-10 flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-sm {% if order.status == 'confirmed' or order.status == 'packed' or order.status == 'delivered' %}bg-orange-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %}">
-                        <i data-lucide="phone" class="w-4 h-4"></i>
-                    </div>
-                    <span class="text-[10px] sm:text-xs font-bold mt-2 {% if order.status == 'confirmed' or order.status == 'packed' or order.status == 'delivered' %}text-slate-800{% else %}text-slate-400{% endif %}">Confirmed</span>
-                </div>
-
-                <div class="relative z-10 flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-sm {% if order.status == 'packed' or order.status == 'delivered' %}bg-orange-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %}">
-                        <i data-lucide="bike" class="w-4 h-4"></i>
-                    </div>
-                    <span class="text-[10px] sm:text-xs font-bold mt-2 {% if order.status == 'packed' or order.status == 'delivered' %}text-slate-800{% else %}text-slate-400{% endif %}">On the way</span>
-                </div>
-
-                <div class="relative z-10 flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-sm {% if order.status == 'delivered' %}bg-green-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %}">
-                        <i data-lucide="home" class="w-4 h-4"></i>
-                    </div>
-                    <span class="text-[10px] sm:text-xs font-bold mt-2 {% if order.status == 'delivered' %}text-slate-800{% else %}text-slate-400{% endif %}">Delivered</span>
-                </div>
-            </div>
-        {% endif %}
+        {% include "marketplace/_order_status_partial.html" %}
 
         <div class="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
             <div class="p-5">

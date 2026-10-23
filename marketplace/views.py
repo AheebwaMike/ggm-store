@@ -462,6 +462,13 @@ def customer_order_detail(request, order_id):
         request.session.pop('customer_id', None)
         return redirect('home')
 
+    if request.headers.get('HX-Request') == 'true':
+        return render(
+            request,
+            'marketplace/_order_status_partial.html',
+            {'order': order},
+        )
+
     return render(request, 'marketplace/customer_order_detail.html', {
         'order': order,
     })
