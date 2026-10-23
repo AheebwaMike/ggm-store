@@ -257,6 +257,7 @@ def checkout(request):
         apartment_id = request.POST.get('apartment', '').strip()
         unit_number = request.POST.get('unit_number', '').strip()
         payment_method = request.POST.get('payment_method', '').strip()
+        note = request.POST.get('note', '').strip()
 
         apartment = None
         if not phone:
@@ -300,6 +301,7 @@ def checkout(request):
                 payment_method=payment_method,
                 total_amount=grand_total,
                 delivery_fee=delivery_fee,
+                note=note,
             )
             for item in items:
                 OrderItem.objects.create(

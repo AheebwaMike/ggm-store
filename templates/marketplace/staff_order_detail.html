@@ -53,6 +53,16 @@
             </p>
         </div>
 
+        {% if order.note %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4 flex items-start gap-3">
+            <i data-lucide="message-square" class="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"></i>
+            <div>
+                <p class="text-xs font-bold text-yellow-800 uppercase tracking-wide mb-1">Delivery Instructions</p>
+                <p class="text-sm font-medium text-yellow-900">{{ order.note }}</p>
+            </div>
+        </div>
+        {% endif %}
+
         <h2 class="font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">Items</h2>
         <div class="space-y-3 mb-4">
             {% for item in order.items.all %}

@@ -136,6 +136,7 @@ class StaffManifestTests(TestCase):
         payment_method='cash',
         total_amount,
         name='',
+        note='',
     ):
         customer = Customer.objects.create(
             phone_number=phone,
@@ -147,6 +148,7 @@ class StaffManifestTests(TestCase):
             status=status,
             payment_method=payment_method,
             total_amount=total_amount,
+            note=note,
         )
 
     def test_manifest_shows_today_active_orders_grouped_and_summed(self):
@@ -163,6 +165,7 @@ class StaffManifestTests(TestCase):
             payment_method='momo',
             status='packed',
             total_amount=Decimal('2500.00'),
+            note='Call when you reach the gate',
         )
         self.create_order(
             phone='0700000003',
@@ -192,6 +195,12 @@ class StaffManifestTests(TestCase):
         self.assertNotIn(f'#{old_order.pk}', content)
         self.assertIn('MOMO TO COLLECT', content)
         self.assertIn('aria-label="Delivery completion checkbox"', content)
+        self.assertIn('Note: Call when you reach the gate', content)
+
+        self.client.force_login(self.staff)
+        detail_response = self.client.get(f'/staff/order/{order_a.pk}/')
+        self.assertContains(detail_response, 'Delivery Instructions')
+        self.assertContains(detail_response, 'Call when you reach the gate')
 
     def test_manifest_requires_login_and_staff_header_links_to_it(self):
         response = self.client.get('/staff/manifest/')
@@ -253,15 +262,30 @@ class DeliveryPricingTests(TestCase):
             'apartment': str(self.apartment.pk),
             'unit_number': '4A',
             'payment_method': 'cash',
+            'note': 'Call when you reach the gate',
         })
 
         order = Order.objects.get()
         self.assertRedirects(response, f'/order/success/{order.pk}/')
         self.assertEqual(order.delivery_fee, Decimal('2000.00'))
         self.assertEqual(order.total_amount, Decimal('17000.00'))
+        self.assertEqual(order.note, 'Call when you reach the gate')
         success_response = self.client.get(f'/order/success/{order.pk}/')
         self.assertContains(success_response, 'UGX 2000')
         self.assertContains(success_response, 'UGX 17000')
+
+    def test_checkout_preserves_note_when_validation_fails(self):
+        response = self.client.post('/checkout/', {
+            'phone': '',
+            'name': '',
+            'apartment': str(self.apartment.pk),
+            'unit_number': '',
+            'payment_method': 'cash',
+            'note': 'Call when you reach the gate',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Call when you reach the gate')
 
     def test_minimum_order_value_prevents_checkout(self):
         self.config.minimum_order_value = Decimal('20000.00')

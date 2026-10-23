@@ -67,6 +67,11 @@
                                 <p class="text-sm font-medium text-slate-700">Unit: {{ order.customer.unit_number }}</p>
                                 {% endif %}
                                 <p class="text-xs text-slate-500 mt-1">Phone: {{ order.customer.phone_number }}</p>
+                                {% if order.note %}
+                                <div class="mt-1 border-l-2 border-black pl-2">
+                                    <p class="text-xs font-bold italic text-slate-800">Note: {{ order.note }}</p>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="text-right">
