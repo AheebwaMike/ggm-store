@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django import forms
@@ -571,35 +572,76 @@ def service_worker(request):
 @staff_member_required
 def owner_dashboard(request):
     today = timezone.localdate()
-    today_orders = Order.objects.filter(
-        created_at__date=today,
+    date_str = request.GET.get('date')
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else today
+    except ValueError:
+        selected_date = today
+
+    day_orders = Order.objects.filter(
+        created_at__date=selected_date,
     ).exclude(status='cancelled')
 
-    total_orders = today_orders.count()
-    total_revenue = today_orders.aggregate(total=Sum('total_amount'))['total'] or 0
+    total_orders = day_orders.count()
+    total_revenue = day_orders.aggregate(total=Sum('total_amount'))['total'] or 0
     avg_order_value = total_revenue / total_orders if total_orders else 0
 
-    cash_orders = today_orders.filter(payment_method='cash').count()
-    momo_orders = today_orders.filter(payment_method='momo').count()
+    cash_orders = day_orders.filter(payment_method='cash').count()
+    momo_orders = day_orders.filter(payment_method='momo').count()
     top_products = OrderItem.objects.filter(
-        order__in=today_orders,
+        order__in=day_orders,
         product__isnull=False,
     ).values(
         'product__name',
     ).annotate(
         total_qty=Sum('quantity'),
     ).order_by('-total_qty', 'product__name')[:5]
-    low_stock_products = Product.objects.filter(
-        is_active=True,
-        stock_quantity__lte=F('low_stock_threshold'),
-    ).order_by('stock_quantity', 'name')[:10]
 
-    recent_orders = Order.objects.select_related(
+    seven_days_ago = selected_date - timedelta(days=6)
+    trend_data = Order.objects.filter(
+        created_at__date__gte=seven_days_ago,
+        created_at__date__lte=selected_date,
+    ).exclude(
+        status='cancelled',
+    ).values(
+        'created_at__date',
+    ).annotate(
+        daily_revenue=Sum('total_amount'),
+    ).order_by('created_at__date')
+    trend_revenue_by_date = {
+        item['created_at__date']: item['daily_revenue']
+        for item in trend_data
+    }
+    seven_day_trend = [
+        {
+            'date': day,
+            'revenue': trend_revenue_by_date.get(day, 0),
+            'is_selected': day == selected_date,
+        }
+        for day in (
+            seven_days_ago + timedelta(days=offset)
+            for offset in range(7)
+        )
+    ]
+    max_trend_revenue = max(
+        (day['revenue'] for day in seven_day_trend),
+        default=0,
+    ) or 1
+
+    recent_orders = day_orders.select_related(
         'customer',
     ).order_by('-created_at')[:10]
 
+    low_stock_products = Product.objects.filter(
+        is_active=True,
+        stock_quantity__lte=F('low_stock_threshold'),
+    ).order_by('stock_quantity', 'name')[:5]
+
     return render(request, 'marketplace/owner_dashboard.html', {
-        'today': today,
+        'selected_date': selected_date,
+        'today_date': today,
+        'yesterday_date': today - timedelta(days=1),
+        'is_today': selected_date == today,
         'total_orders': total_orders,
         'total_revenue': total_revenue,
         'avg_order_value': avg_order_value,
@@ -608,6 +650,8 @@ def owner_dashboard(request):
         'top_products': top_products,
         'low_stock_products': low_stock_products,
         'recent_orders': recent_orders,
+        'seven_day_trend': seven_day_trend,
+        'max_trend_revenue': max_trend_revenue,
     })
 
 

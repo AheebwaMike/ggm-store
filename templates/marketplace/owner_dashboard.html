@@ -4,22 +4,35 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto pb-10">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
                 <i data-lucide="bar-chart-2" class="w-6 h-6 text-orange-500"></i> Dashboard
             </h1>
-            <p class="text-sm text-slate-500 mt-1">{{ today|date:"l, d F Y" }}</p>
+            <p class="text-sm text-slate-500 mt-1">
+                {% if is_today %}Today{% else %}Showing data for{% endif %}:
+                <span class="font-bold text-slate-700">{{ selected_date|date:"l, d F Y" }}</span>
+            </p>
         </div>
-        <a href="{% url 'staff_orders' %}" class="text-sm font-medium text-slate-600 hover:text-orange-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 transition-colors shadow-sm inline-flex items-center gap-2">
-            <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Back to Orders
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'staff_orders' %}" class="text-sm font-medium text-slate-600 hover:text-orange-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 transition-colors shadow-sm inline-flex items-center gap-2">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Orders
+            </a>
+            <form method="get" class="flex items-center gap-2">
+                <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" onchange="this.form.submit()" class="bg-white border border-slate-200 text-sm font-medium text-slate-700 rounded-lg px-3 py-1.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer">
+            </form>
+        </div>
+    </div>
+
+    <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <a href="?date={{ today_date|date:'Y-m-d' }}" class="px-3 py-1 rounded-lg text-xs font-bold transition-colors {% if is_today %}bg-orange-100 text-orange-700 border border-orange-200{% else %}bg-white text-slate-500 border border-slate-200{% endif %}">Today</a>
+        <a href="?date={{ yesterday_date|date:'Y-m-d' }}" class="px-3 py-1 rounded-lg text-xs font-bold transition-colors {% if selected_date == yesterday_date %}bg-orange-100 text-orange-700 border border-orange-200{% else %}bg-white text-slate-500 border border-slate-200{% endif %}">Yesterday</a>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
             <div class="flex items-center gap-2 text-slate-500 text-sm font-medium mb-2">
-                <i data-lucide="banknote" class="w-4 h-4 text-green-500"></i> Revenue Today
+                <i data-lucide="banknote" class="w-4 h-4 text-green-500"></i> Revenue
             </div>
             <p class="text-2xl font-bold text-slate-800">UGX {{ total_revenue|floatformat:0 }}</p>
         </div>
@@ -34,6 +47,26 @@
                 <i data-lucide="trending-up" class="w-4 h-4 text-orange-500"></i> Avg. Order Value
             </div>
             <p class="text-2xl font-bold text-slate-800">UGX {{ avg_order_value|floatformat:0 }}</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-6">
+        <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <i data-lucide="activity" class="w-5 h-5 text-indigo-500"></i> 7-Day Revenue Trend
+        </h2>
+        <div class="flex items-end justify-between h-32 gap-2">
+            {% for day in seven_day_trend %}
+            <div class="flex flex-col items-center flex-1 group relative">
+                <div class="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[10px] font-bold py-1 px-2 rounded whitespace-nowrap z-10">
+                    UGX {{ day.revenue|floatformat:0 }}
+                </div>
+                <div class="w-full max-w-[40px] rounded-t-sm transition-all duration-300 {% if day.is_selected %}bg-orange-500{% else %}bg-slate-200 group-hover:bg-slate-300{% endif %}"
+                     style="height: {% widthratio day.revenue max_trend_revenue 100 %}%"></div>
+                <span class="text-[10px] font-medium mt-2 {% if day.is_selected %}text-orange-600 font-bold{% else %}text-slate-400{% endif %}">
+                    {{ day.date|date:"D" }}
+                </span>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
@@ -59,7 +92,7 @@
 
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
                 <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i data-lucide="flame" class="w-5 h-5 text-orange-500"></i> Top Products Today
+                    <i data-lucide="flame" class="w-5 h-5 text-orange-500"></i> Top Products
                 </h2>
                 <div class="space-y-3">
                     {% for item in top_products %}
@@ -68,7 +101,7 @@
                         <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-md shrink-0">{{ item.total_qty }} sold</span>
                     </div>
                     {% empty %}
-                    <p class="text-sm text-slate-500 text-center py-4">No sales yet today.</p>
+                    <p class="text-sm text-slate-500 text-center py-4">No sales on this date.</p>
                     {% endfor %}
                 </div>
             </div>
@@ -126,7 +159,7 @@
                     </span>
                 </div>
                 {% empty %}
-                <p class="text-sm text-slate-500 text-center py-4">No orders yet.</p>
+                <p class="text-sm text-slate-500 text-center py-4">No orders on this date.</p>
                 {% endfor %}
             </div>
         </div>

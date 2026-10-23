@@ -98,6 +98,45 @@ class OwnerDashboardTests(TestCase):
                 {'product__name': 'Product B', 'total_qty': Decimal('3')},
             ],
         )
+        self.assertEqual(response.context['selected_date'], timezone.localdate())
+        self.assertEqual(len(response.context['seven_day_trend']), 7)
+        self.assertEqual(response.context['seven_day_trend'][-1]['date'], timezone.localdate())
+
+    def test_dashboard_filters_historical_date_and_builds_seven_day_trend(self):
+        selected_date = timezone.localdate() - timedelta(days=1)
+        historical_order = self.create_order(total_amount=Decimal('1200.00'))
+        Order.objects.filter(pk=historical_order.pk).update(
+            created_at=timezone.now() - timedelta(days=1),
+        )
+        cancelled_order = self.create_order(
+            status='cancelled',
+            total_amount=Decimal('500.00'),
+        )
+        Order.objects.filter(pk=cancelled_order.pk).update(
+            created_at=timezone.now() - timedelta(days=1),
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.get('/owner/', {'date': selected_date.isoformat()})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['selected_date'], selected_date)
+        self.assertFalse(response.context['is_today'])
+        self.assertEqual(response.context['total_orders'], 1)
+        self.assertEqual(response.context['total_revenue'], Decimal('1200.00'))
+        self.assertEqual(response.context['recent_orders'].count(), 1)
+        self.assertEqual(len(response.context['seven_day_trend']), 7)
+        self.assertEqual(response.context['seven_day_trend'][-1]['date'], selected_date)
+        self.assertEqual(response.context['seven_day_trend'][-1]['revenue'], Decimal('1200.00'))
+        self.assertContains(response, 'Showing data for')
+
+    def test_invalid_dashboard_date_defaults_to_today(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get('/owner/?date=not-a-date')
+
+        self.assertEqual(response.context['selected_date'], timezone.localdate())
+        self.assertTrue(response.context['is_today'])
 
     def test_dashboard_requires_staff_access(self):
         self.client.force_login(get_user_model().objects.create_user(
