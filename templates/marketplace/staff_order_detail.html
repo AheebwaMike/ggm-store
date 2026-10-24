@@ -80,39 +80,7 @@
         {% endif %}
 
         <h2 class="font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">Items</h2>
-        <div class="space-y-3 mb-4">
-            {% for item in order.items.all %}
-            <div class="flex items-center justify-between text-sm py-1">
-                <div class="flex items-center gap-2">
-                    <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
-                        {% if item.product and item.product.image %}
-                            <img src="{{ item.product.image.url }}" class="w-full h-full object-cover">
-                        {% else %}
-                            {% include "marketplace/_product_image_placeholder.html" with product=item.product icon_size="h-5 w-5" %}
-                        {% endif %}
-                    </div>
-                    <div>
-                        <p class="font-medium text-slate-700">
-                            {{ item.quantity }} × {% if item.product %}{{ item.product.parent_group|default:item.product.name }}{% else %}Removed product{% endif %}
-                        </p>
-                        {% if item.product.variant_label %}
-                            <span class="inline-block bg-orange-100 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5">{{ item.product.variant_label }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <span class="font-bold text-slate-800 shrink-0">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
-            </div>
-            {% endfor %}
-        </div>
-
-        <div class="border-t border-slate-100 pt-4 mb-3 flex justify-between items-center text-sm">
-            <span class="font-medium text-slate-500">Delivery Fee</span>
-            <span class="font-medium text-slate-700">{% if order.delivery_fee == 0 %}FREE{% else %}UGX {{ order.delivery_fee|floatformat:0 }}{% endif %}</span>
-        </div>
-        <div class="border-t border-slate-100 pt-3 flex justify-between items-center">
-            <span class="font-bold text-slate-800 text-lg">Total</span>
-            <span class="text-2xl font-bold text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</span>
-        </div>
+        {% include "marketplace/_staff_order_items.html" %}
     </div>
 
     {% if order.status == 'new' %}

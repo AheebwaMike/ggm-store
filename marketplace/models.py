@@ -155,6 +155,7 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='cash')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    is_modified = models.BooleanField(default=False, help_text="True if staff altered the items after the customer placed it")
     note = models.TextField(blank=True, help_text="Customer delivery instructions")
     
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -162,6 +163,12 @@ class Order(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+
+    @property
+    def subtotal(self):
+        return sum(
+            (item.quantity * item.price_at_time_of_order) for item in self.items.all()
+        )
 
     def __str__(self):
         return f"Order #{self.id} - {self.customer.name}"

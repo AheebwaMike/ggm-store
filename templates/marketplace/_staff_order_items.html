@@ -1,0 +1,64 @@
+<div id="staff-order-items-container">
+    <div class="space-y-3 mb-4">
+        {% for item in order.items.all %}
+        <div class="flex items-center justify-between text-sm py-2 border-b border-slate-100 last:border-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                    {% if item.product and item.product.image %}
+                        <img src="{{ item.product.image.url }}" class="w-full h-full object-cover" alt="{{ item.product.name }}">
+                    {% else %}
+                        {% include "marketplace/_product_image_placeholder.html" with product=item.product icon_size="h-5 w-5" %}
+                    {% endif %}
+                </div>
+                <div>
+                    <p class="font-medium text-slate-800 text-sm">
+                        {% if item.product %}{{ item.product.parent_group|default:item.product.name }}{% else %}Removed product{% endif %}
+                        {% if item.product and item.product.variant_label %}<span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded ml-1">{{ item.product.variant_label }}</span>{% endif %}
+                    </p>
+                    <p class="text-xs text-slate-500">UGX {{ item.price_at_time_of_order|floatformat:0 }}</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                {% if order.status == 'new' or order.status == 'confirmed' %}
+                <div class="flex items-center bg-slate-50 rounded-lg border border-slate-200">
+                    <button hx-post="{% url 'staff_modify_order_item' order.id item.id 'dec' %}" hx-target="#staff-order-items-container" hx-swap="outerHTML" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded-l-lg transition-colors" aria-label="Decrease quantity"><i data-lucide="minus" class="w-3 h-3"></i></button>
+                    <span class="w-8 text-center font-bold text-sm">{{ item.quantity|floatformat:"-2" }}</span>
+                    <button hx-post="{% url 'staff_modify_order_item' order.id item.id 'inc' %}" hx-target="#staff-order-items-container" hx-swap="outerHTML" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded-r-lg transition-colors" aria-label="Increase quantity"><i data-lucide="plus" class="w-3 h-3"></i></button>
+                </div>
+                <button hx-post="{% url 'staff_modify_order_item' order.id item.id 'remove' %}" hx-target="#staff-order-items-container" hx-swap="outerHTML" class="text-red-500 hover:text-red-700 p-1" title="Remove item" aria-label="Remove item"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                {% else %}
+                <span class="font-bold text-slate-800">x{{ item.quantity|floatformat:"-2" }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="border-t border-slate-200 pt-3 mb-4 space-y-1 text-sm">
+        <div class="flex justify-between text-slate-500">
+            <span>Subtotal</span>
+            <span>UGX {{ order.subtotal|floatformat:0 }}</span>
+        </div>
+        <div class="flex justify-between text-slate-500">
+            <span>Delivery Fee</span>
+            <span>UGX {{ order.delivery_fee|floatformat:0 }}</span>
+        </div>
+        <div class="flex justify-between items-center pt-2">
+            <span class="font-bold text-slate-800 text-base">New Total</span>
+            <span class="text-xl font-bold text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</span>
+        </div>
+    </div>
+
+    {% if order.status == 'new' or order.status == 'confirmed' %}
+    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+        <p class="text-xs font-bold text-slate-500 uppercase mb-2">Add a Substitute</p>
+        <input type="search" name="q" placeholder="Search product to add..."
+               hx-get="{% url 'staff_search_substitute' order.id %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#substitute-results"
+               class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-orange-500 focus:outline-none">
+        <div id="substitute-results" class="mt-2 space-y-1"></div>
+    </div>
+    {% endif %}
+</div>

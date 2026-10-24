@@ -192,6 +192,21 @@ def _get_store_config():
     return config
 
 
+def _recalculate_order(order):
+    """Recalculates subtotal, delivery fee, and total for an order."""
+    subtotal = sum(
+        (item.quantity * item.price_at_time_of_order) for item in order.items.all()
+    )
+    config = _get_store_config()
+    delivery_fee = _calculate_delivery_fee(subtotal, order.customer.apartment, config)
+
+    order.total_amount = subtotal + delivery_fee
+    order.delivery_fee = delivery_fee
+    order.is_modified = True
+    order.save(update_fields=['total_amount', 'delivery_fee', 'is_modified', 'updated_at'])
+    return order
+
+
 def _send_push_to_customer(customer, title, body, url):
     if not customer:
         return
@@ -805,6 +820,92 @@ def log_whatsapp_notification(request, order_id, status_sent):
         status_sent=status_sent,
     )
     return HttpResponse(status=204)
+
+
+@login_required
+@require_POST
+def staff_modify_order_item(request, order_id, item_id, action):
+    order = get_object_or_404(Order, id=order_id)
+    item = get_object_or_404(OrderItem, id=item_id, order=order)
+
+    if action == 'inc':
+        item.quantity += 1
+        item.save()
+    elif action == 'dec':
+        item.quantity -= 1
+        if item.quantity <= 0:
+            item.delete()
+        else:
+            item.save()
+    elif action == 'remove':
+        item.delete()
+    else:
+        return HttpResponse(status=400)
+
+    _recalculate_order(order)
+
+    _send_push_to_customer(
+        customer=order.customer,
+        title='Your order was updated',
+        body=(
+            f"We made a change to your order #{order.id} due to stock availability. "
+            f"Your new total is UGX {order.total_amount:,.0f}."
+        ),
+        url=f'/my-orders/{order.id}/',
+    )
+
+    return render(request, 'marketplace/_staff_order_items.html', {'order': order})
+
+
+@login_required
+def staff_search_substitute(request, order_id):
+    q = request.GET.get('q', '').strip()
+    results = []
+    if q:
+        results = Product.objects.filter(
+            Q(name__icontains=q) | Q(code__icontains=q),
+            is_active=True,
+            selling_price__gt=0,
+        )[:10]
+
+    order = get_object_or_404(Order, id=order_id)
+    return render(
+        request,
+        'marketplace/_staff_substitute_search.html',
+        {'results': results, 'order': order, 'q': q},
+    )
+
+
+@login_required
+@require_POST
+def staff_add_substitute(request, order_id, product_id):
+    order = get_object_or_404(Order, id=order_id)
+    product = get_object_or_404(Product, id=product_id)
+
+    existing_item = order.items.filter(product=product).first()
+    if existing_item:
+        existing_item.quantity += 1
+        existing_item.save()
+    else:
+        OrderItem.objects.create(
+            order=order,
+            product=product,
+            quantity=1,
+            price_at_time_of_order=product.selling_price,
+        )
+
+    _recalculate_order(order)
+    _send_push_to_customer(
+        customer=order.customer,
+        title='Your order was updated',
+        body=(
+            f"We added {product.name} to your order #{order.id}. "
+            f"Your new total is UGX {order.total_amount:,.0f}."
+        ),
+        url=f'/my-orders/{order.id}/',
+    )
+
+    return render(request, 'marketplace/_staff_order_items.html', {'order': order})
 
 
 @login_required
