@@ -14,7 +14,7 @@
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 active:bg-slate-50 transition-colors">
             <a href="{% url 'product_detail' item.product.id %}" class="w-16 h-16 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden border border-slate-100" aria-label="View {{ item.product.name }}">
                 {% if item.product.image %}
-                    <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover">
+                    <img src="{{ item.product.thumbnail_url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover">
                 {% else %}
                     <i data-lucide="shopping-basket" class="w-8 h-8 text-orange-200"></i>
                 {% endif %}

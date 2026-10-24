@@ -5,7 +5,7 @@
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
                     {% if item.product and item.product.image %}
-                        <img src="{{ item.product.image.url }}" class="w-full h-full object-cover" alt="{{ item.product.name }}">
+                        <img src="{{ item.product.thumbnail_url }}" class="w-full h-full object-cover" alt="{{ item.product.name }}">
                     {% else %}
                         {% include "marketplace/_product_image_placeholder.html" with product=item.product icon_size="h-5 w-5" %}
                     {% endif %}

@@ -16,3 +16,5 @@ wheels/
 db.sqlite3
 staticfiles/
 .vscode/
+
+commit.txt
