@@ -1,0 +1,46 @@
+ggm-store/
+├── .env
+├── .env.example
+├── .env.prod
+├── .gitignore
+├── .python-version
+├── README.md
+├── Procfile
+├── build.sh
+├── manage.py
+├── pyproject.toml
+├── run.sh
+├── runtime.txt
+├── uv.lock
+├── db.sqlite3
+├── core/
+│   ├── __init__.py
+│   ├── asgi.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── settings/
+│       ├── __init__.py
+│       ├── base.py
+│       ├── development.py
+│       └── production.py
+├── marketplace/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── context_processors.py
+│   ├── models.py
+│   ├── tests.py
+│   ├── urls.py
+│   ├── views.py
+│   ├── management/
+│   │   └── commands/
+│   └── migrations/
+├── templates/
+│   ├── base.html
+│   ├── marketplace/
+│   └── registration/
+├── static/
+├── staticfiles/
+├── media/
+├── data/
+└── scripts/
