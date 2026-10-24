@@ -26,7 +26,12 @@
                     <div class="flex justify-between text-sm items-start">
                         <div class="flex gap-2">
                             <span class="text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded">{{ item.quantity }}x</span>
-                            <span class="text-slate-700 font-medium">{% if item.product %}{{ item.product.name }}{% else %}Removed product{% endif %}</span>
+                            <span class="text-slate-700 font-medium">
+                                {% if item.product %}{{ item.product.parent_group|default:item.product.name }}{% else %}Removed product{% endif %}
+                                {% if item.product.variant_label %}
+                                    <span class="text-[10px] bg-slate-200 text-slate-600 font-bold px-1.5 py-0.5 rounded ml-1">{{ item.product.variant_label }}</span>
+                                {% endif %}
+                            </span>
                         </div>
                         <span class="font-bold text-slate-800">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
                     </div>

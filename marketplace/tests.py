@@ -256,10 +256,29 @@ class StaffManifestTests(TestCase):
         self.assertIn('aria-label="Delivery completion checkbox"', content)
         self.assertIn('Note: Call when you reach the gate', content)
 
+        manifest_product = Product.objects.create(
+            code='MANIFEST-VARIANT',
+            name='KAKIRA SUGAR 25KG',
+            parent_group='Kakira Sugar',
+            variant_label='25KG',
+        )
+        OrderItem.objects.create(
+            order=order_a,
+            product=manifest_product,
+            quantity=Decimal('2'),
+            price_at_time_of_order=Decimal('90000.00'),
+        )
+        response = self.client.get('/staff/manifest/')
+        self.assertContains(response, 'ITEMS:')
+        self.assertContains(response, 'Kakira Sugar')
+        self.assertContains(response, '(25KG)')
+
         self.client.force_login(self.staff)
         detail_response = self.client.get(f'/staff/order/{order_a.pk}/')
         self.assertContains(detail_response, 'Delivery Instructions')
         self.assertContains(detail_response, 'Call when you reach the gate')
+        self.assertContains(detail_response, 'Kakira Sugar')
+        self.assertContains(detail_response, '25KG')
 
     def test_manifest_requires_login_and_staff_header_links_to_it(self):
         response = self.client.get('/staff/manifest/')
@@ -314,6 +333,25 @@ class DeliveryPricingTests(TestCase):
         )
         self.assertContains(response, 'FREE')
 
+    def test_cart_and_checkout_summary_show_variant_and_product_link(self):
+        self.product.parent_group = 'Test Sugar'
+        self.product.variant_label = '25KG'
+        self.product.save(update_fields=['parent_group', 'variant_label'])
+
+        cart_response = self.client.get('/cart/')
+        self.assertContains(cart_response, 'Test Sugar')
+        self.assertContains(cart_response, '25KG')
+        self.assertContains(
+            cart_response,
+            f'href="/product/{self.product.pk}/"',
+        )
+
+        summary_response = self.client.get(
+            f'/checkout/summary/?apartment={self.apartment.pk}',
+        )
+        self.assertContains(summary_response, 'Test Sugar')
+        self.assertContains(summary_response, '25KG')
+
     def test_checkout_persists_delivery_fee_and_grand_total(self):
         response = self.client.post('/checkout/', {
             'phone': '0701234567',
@@ -332,6 +370,27 @@ class DeliveryPricingTests(TestCase):
         success_response = self.client.get(f'/order/success/{order.pk}/')
         self.assertContains(success_response, 'UGX 2000')
         self.assertContains(success_response, 'UGX 17000')
+
+    def test_customer_order_receipt_shows_product_parent_and_variant(self):
+        self.product.parent_group = 'Test Sugar'
+        self.product.variant_label = '25KG'
+        self.product.save(update_fields=['parent_group', 'variant_label'])
+        response = self.client.post('/checkout/', {
+            'phone': '0701234567',
+            'name': 'Test Buyer',
+            'apartment': str(self.apartment.pk),
+            'unit_number': '4A',
+            'payment_method': 'cash',
+        })
+        order = Order.objects.get()
+
+        self.assertRedirects(response, f'/order/success/{order.pk}/')
+        receipt_response = self.client.get(
+            f'/my-orders/{order.pk}/',
+            follow=True,
+        )
+        self.assertContains(receipt_response, 'Test Sugar')
+        self.assertContains(receipt_response, '25KG')
 
     def test_checkout_preserves_note_when_validation_fails(self):
         response = self.client.post('/checkout/', {
