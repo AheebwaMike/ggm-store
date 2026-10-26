@@ -166,6 +166,19 @@ def cart_count(request):
     cart = _get_cart(request)
     return HttpResponse(str(_cart_total_items(cart)))
 
+def cart_bar(request):
+    """Floating cart summary (HTMX partial). Empty body when the cart is empty."""
+    if not _get_cart(request):
+        return HttpResponse('')
+    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(request)
+    if not items:
+        return HttpResponse('')
+    return render(request, 'marketplace/_cart_bar.html', {
+        'item_count': sum(item['quantity'] for item in items),
+        'subtotal': subtotal,
+        'amount_for_free_delivery': amount_for_free_delivery,
+    })
+
 
 @require_POST
 def add_to_cart(request, product_id):

@@ -1,0 +1,18 @@
+{# Swapped into #cart-bar in base.html. The view returns an empty body when the cart is empty. #}
+<a href="{% url 'cart_view' %}"
+   class="pointer-events-auto flex items-center gap-3 rounded-2xl bg-slate-900 py-2.5 pl-2.5 pr-4 text-white shadow-bar transition-transform active:scale-[0.99]"
+   aria-label="View cart, {{ item_count }} item{{ item_count|pluralize }}, UGX {{ subtotal|floatformat:'0g' }}">
+    <span class="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-600">
+        <i data-lucide="shopping-bag" class="h-5 w-5"></i>
+        <span class="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-white px-1 text-[10px] font-extrabold text-slate-900">{{ item_count }}</span>
+    </span>
+
+    <span class="min-w-0 flex-1">
+        <span class="block text-sm font-bold leading-tight">View cart</span>
+        <span class="block truncate text-[11px] leading-tight text-slate-300">
+            {% if amount_for_free_delivery > 0 %}Add UGX {{ amount_for_free_delivery|floatformat:"0g" }} more for free delivery{% else %}Free delivery unlocked{% endif %}
+        </span>
+    </span>
+
+    <span class="shrink-0 text-base font-extrabold tabular-nums">UGX {{ subtotal|floatformat:"0g" }}</span>
+</a>

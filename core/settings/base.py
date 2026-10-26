@@ -85,6 +85,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'marketplace.context_processors.vapid_public_key',
+                'marketplace.context_processors.store_context',
             ],
         },
     },

@@ -1,0 +1,28 @@
+{% comment %}
+Mobile app bar for inner pages (category, product, cart, checkout, orders).
+Use it from a page by overriding the mobile_header block:
+
+    {% block mobile_header %}
+        {% include "marketplace/_app_bar.html" with title=group.name back_url=home_url show_search=True %}
+    {% endblock %}
+
+back_url   optional; defaults to the browser's previous page
+show_search optional; adds a search icon that links to the home page search
+{% endcomment %}
+<header class="md:hidden sticky top-0 z-40 border-b border-slate-200/70 bg-white/95 pt-safe backdrop-blur">
+    <div class="flex h-14 items-center gap-2 px-3">
+        <a href="{{ back_url|default:'javascript:history.back()' }}"
+           class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-slate-700 ring-1 ring-slate-200 active:bg-slate-100"
+           aria-label="Back">
+            <i data-lucide="arrow-left" class="h-5 w-5"></i>
+        </a>
+        <p class="min-w-0 flex-1 truncate text-base font-bold text-slate-800">{{ title }}</p>
+        {% if show_search %}
+        <a href="{% url 'home' %}"
+           class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-slate-700 active:bg-slate-100"
+           aria-label="Search products">
+            <i data-lucide="search" class="h-5 w-5"></i>
+        </a>
+        {% endif %}
+    </div>
+</header>
