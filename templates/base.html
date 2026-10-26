@@ -62,7 +62,7 @@
     <link rel="icon" href="/static/icons/favicon.ico" type="image/x-icon">
 
     <!-- Bump ?v= whenever styles.css changes (the service worker caches static files cache-first) -->
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=2">
 
     <!-- Lucide Icons (pin to an exact version once you have checked the one you want) -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -317,7 +317,7 @@
             };
 
             function syncCartBadges() {
-                document.querySelectorAll('#cart-count-desktop, #cart-count-mobile').forEach((el) => {
+                document.querySelectorAll('#cart-count-desktop, #cart-count-mobile, #cart-count-detail').forEach((el) => {
                     const count = parseInt(el.textContent, 10) || 0;
                     el.classList.toggle('hidden', count === 0);
                 });
@@ -339,6 +339,8 @@
                     setTimeout(() => el.classList.remove('pop'), 320);
                     const name = el.getAttribute('data-name');
                     window.ggmToast(name ? 'Added: ' + name : 'Added to cart');
+                } else if (evt.detail.xhr && evt.detail.xhr.status === 409) {
+                    window.ggmToast('Sorry, that item is out of stock', 'error');
                 } else if (evt.detail.xhr && evt.detail.xhr.status === 403) {
                     window.ggmToast('The store is closed right now', 'error');
                 } else {

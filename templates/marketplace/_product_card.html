@@ -6,20 +6,23 @@ Plain product (Buy Again / Featured carousels):
     {% include "marketplace/_product_card.html" with product=product promo=True %}
 
 Item from _group_products (search results and category pages):
-    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price %}
+    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product %}
+
+image_product (optional): the product whose photo to show. For a variant group it is the first
+variant that has a photo, so a group never looks empty because one size lacks an image.
 
 The wrapper decides the width (grid cell, or w-40 shrink-0 inside .snap-row); the card fills it.
 Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is for the detail page.
 {% endcomment %}
-{% with thumb=product.thumbnail_url %}
+{% with img=image_product|default:product %}
 <article class="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
 
     <div class="relative aspect-square bg-brand-50">
         <a href="{% url 'product_detail' product.id %}"
            class="absolute inset-0 block"
            aria-label="View {{ parent_name|default:product.name }}">
-            {% if thumb %}
-                <img src="{{ thumb }}" alt="" width="300" height="300"
+            {% if img.image and img.thumbnail_url %}
+                <img src="{{ img.thumbnail_url }}" alt="" width="300" height="300"
                      loading="lazy" decoding="async"
                      class="h-full w-full object-cover">
             {% else %}

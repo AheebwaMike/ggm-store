@@ -2,53 +2,34 @@
 
 {% block title %}{{ group.name }} - GGM Store{% endblock %}
 
+{% block mobile_header %}
+    {% url 'home' as home_url %}
+    {% include "marketplace/_app_bar.html" with title=group.name back_url=home_url show_search=True %}
+{% endblock %}
+
 {% block content %}
-<div class="mb-4">
-    <a href="{% url 'home' %}" class="text-sm text-orange-600 hover:underline">← Back to categories</a>
+<a href="{% url 'home' %}" class="mb-4 hidden items-center gap-1 text-sm font-semibold text-slate-500 transition-colors hover:text-brand-600 md:inline-flex">
+    <i data-lucide="arrow-left" class="h-4 w-4"></i> All categories
+</a>
+
+<div class="mb-4 flex items-end justify-between gap-3">
+    {# The app bar shows the title on phones, so the heading is screen-reader only there #}
+    <h1 class="sr-only text-2xl font-extrabold tracking-tight text-slate-800 md:not-sr-only">{{ group.name }}</h1>
+    <p class="text-sm text-slate-500">{{ products|length }} item{{ products|length|pluralize }}</p>
 </div>
 
-<h1 class="text-2xl font-bold mb-4">{{ group.name }}</h1>
-
-<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
     {% for item in products %}
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 active:bg-slate-50 transition-colors">
-            <a href="{% url 'product_detail' item.product.id %}" class="w-16 h-16 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden border border-slate-100" aria-label="View {{ item.product.name }}">
-                {% if item.product.image %}
-                    <img src="{{ item.product.thumbnail_url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover">
-                {% else %}
-                    <i data-lucide="shopping-basket" class="w-8 h-8 text-orange-200"></i>
-                {% endif %}
-            </a>
-            <div class="flex-1 min-w-0 pr-2">
-                <a href="{% url 'product_detail' item.product.id %}" class="font-medium text-slate-800 text-sm truncate hover:text-orange-600 transition-colors block">
-                    {{ item.parent_name|default:item.product.name }}
-                </a>
-                {% if item.is_group %}
-                    <p class="text-[11px] text-orange-600 font-bold mt-0.5">{{ item.variant_count }} options available</p>
-                    <p class="text-orange-600 font-bold mt-1">From UGX {{ item.min_price|floatformat:0 }}</p>
-                {% else %}
-                    <p class="text-[11px] text-slate-400 mt-0.5">{{ item.product.unit.name|default:"PCS" }}</p>
-                    <p class="text-orange-600 font-bold mt-1">UGX {{ item.product.selling_price|floatformat:0 }}</p>
-                {% endif %}
-            </div>
-            {% if item.is_group %}
-                <a href="{% url 'product_detail' item.product.id %}" class="bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0 transition-colors shadow-sm">
-                    Select
-                </a>
-            {% else %}
-                {% if config.is_open %}
-                    <button hx-post="{% url 'add_to_cart' item.product.id %}" hx-swap="none" class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shrink-0 shadow-sm">
-                        <i data-lucide="plus" class="w-5 h-5"></i>
-                    </button>
-                {% else %}
-                    <button disabled aria-label="Closed: store is not accepting orders" class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 cursor-not-allowed">
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
-                {% endif %}
-            {% endif %}
-        </div>
+        {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product %}
     {% empty %}
-        <p class="col-span-full text-slate-500">No products available in this category right now.</p>
+        <div class="col-span-full rounded-2xl bg-white py-14 text-center shadow-card ring-1 ring-slate-900/5">
+            <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-slate-50">
+                <i data-lucide="package-open" class="h-8 w-8 text-slate-400"></i>
+            </div>
+            <p class="text-lg font-bold text-slate-700">Nothing here right now</p>
+            <p class="mt-1 text-sm text-slate-500">No products are available in this category at the moment.</p>
+            <a href="{% url 'home' %}" class="mt-5 inline-flex items-center rounded-xl bg-brand-100 px-5 py-2.5 text-sm font-bold text-brand-700">Browse other categories</a>
+        </div>
     {% endfor %}
 </div>
 {% endblock %}

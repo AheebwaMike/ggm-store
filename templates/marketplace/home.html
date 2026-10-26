@@ -1,25 +1,26 @@
 {% extends "base.html" %}
+{% load ggm_ui %}
 
 {% block title %}Home - GGM Store{% endblock %}
 
 {% block content %}
 {% if VAPID_PUBLIC_KEY %}
-<div id="push-prompt-banner" class="mb-4 bg-slate-800 text-white rounded-2xl p-4 items-center justify-between shadow-lg hidden">
-    <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-            <i data-lucide="bell" class="w-5 h-5"></i>
+<div id="push-prompt-banner" class="mb-4 hidden items-center justify-between gap-3 rounded-2xl bg-slate-900 p-3.5 text-white shadow-card">
+    <div class="flex min-w-0 items-center gap-3">
+        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15">
+            <i data-lucide="bell" class="h-5 w-5"></i>
         </div>
-        <div>
-            <p class="font-bold text-sm">Get order updates</p>
-            <p class="text-xs text-slate-300">Enable notifications to know when your order is on the way.</p>
+        <div class="min-w-0">
+            <p class="text-sm font-bold">Get order updates</p>
+            <p class="text-xs text-slate-300">Turn on notifications to know when your order is on the way.</p>
         </div>
     </div>
-    <div class="flex items-center gap-2 ml-2 shrink-0">
-        <button type="button" onclick="requestNotificationPermission()" class="bg-white text-slate-900 text-xs font-bold px-4 py-2 rounded-xl">
+    <div class="flex shrink-0 items-center gap-1">
+        <button type="button" onclick="requestNotificationPermission()" class="rounded-xl bg-white px-4 py-2 text-xs font-bold text-slate-900">
             Enable
         </button>
-        <button type="button" onclick="localStorage.setItem('push_dismissed_until', String(Date.now() + 7 * 24 * 60 * 60 * 1000)); this.closest('#push-prompt-banner').style.display='none';" aria-label="Dismiss notification prompt" class="text-white/70 hover:text-white p-1">
-            <i data-lucide="x" class="w-4 h-4"></i>
+        <button type="button" onclick="localStorage.setItem('push_dismissed_until', String(Date.now() + 7 * 24 * 60 * 60 * 1000)); this.closest('#push-prompt-banner').style.display='none';" aria-label="Dismiss notification prompt" class="p-2 text-white/70 hover:text-white">
+            <i data-lucide="x" class="h-4 w-4"></i>
         </button>
     </div>
 </div>
@@ -38,190 +39,102 @@
 </script>
 {% endif %}
 
-{% if not config.is_open %}
-<div class="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
-    <i data-lucide="store" class="w-6 h-6 text-red-500 shrink-0 mt-0.5"></i>
-    <div>
-        <h2 class="font-bold text-red-800">We are currently closed</h2>
-        <p class="text-sm text-red-600 mt-1">{{ config.closed_message }}</p>
-    </div>
-</div>
-{% endif %}
-
-<div class="mb-8">
-    <form method="get" action="{% url 'home' %}" class="relative group">
-        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <i data-lucide="search" class="w-5 h-5 text-slate-400 group-focus-within:text-orange-500 transition-colors"></i>
-        </div>
-        <input type="text" name="q" value="{{ query }}" placeholder="Search for milk, sugar, soap..."
-               class="w-full bg-white border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400">
-    </form>
-</div>
-
 {% if messages %}
     {% for message in messages %}
-        <div class="mb-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">{{ message }}</div>
+        <div class="mb-4 rounded-xl bg-blue-50 p-3 text-sm font-medium text-blue-700">{{ message }}</div>
     {% endfor %}
 {% endif %}
 
+{% if not config.is_open %}
+<div class="mb-5 flex items-start gap-3 rounded-2xl bg-red-50 p-4 ring-1 ring-red-200">
+    <i data-lucide="store" class="mt-0.5 h-6 w-6 shrink-0 text-red-500"></i>
+    <div>
+        <h2 class="font-bold text-red-800">We are closed right now</h2>
+        <p class="mt-1 text-sm text-red-700">{{ config.closed_message }}</p>
+    </div>
+</div>
+{% endif %}
+
 {% if query %}
-    <div class="flex items-center justify-between mb-4">
-        <h1 class="text-xl font-bold text-slate-800">Results for "{{ query }}"</h1>
-        <a href="{% url 'home' %}" class="text-sm text-orange-600 hover:underline">Clear search</a>
+    {# ---------------- Search results ---------------- #}
+    <div class="mb-4 flex items-end justify-between gap-3">
+        <div class="min-w-0">
+            <h1 class="text-lg font-extrabold tracking-tight text-slate-800">Results for “{{ query }}”</h1>
+            <p class="text-xs text-slate-500">{{ search_results|length }} item{{ search_results|length|pluralize }} found</p>
+        </div>
+        <a href="{% url 'home' %}" class="shrink-0 text-sm font-semibold text-brand-600">Clear</a>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {% for item in search_results %}
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 active:bg-slate-50 transition-colors">
-                <div class="w-16 h-16 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden border border-slate-100">
-                    {% if item.product.image %}
-                        <img src="{{ item.product.thumbnail_url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover">
-                    {% else %}
-                        <i data-lucide="shopping-basket" class="w-8 h-8 text-orange-200"></i>
-                    {% endif %}
-                </div>
-                <div class="flex-1 min-w-0 pr-2">
-                    <a href="{% url 'product_detail' item.product.id %}" class="font-medium text-slate-800 text-sm truncate hover:text-orange-600 transition-colors block">
-                        {{ item.parent_name|default:item.product.name }}
-                    </a>
-                    {% if item.is_group %}
-                        <p class="text-[11px] text-orange-600 font-bold mt-0.5">{{ item.variant_count }} sizes/flavours available</p>
-                        <p class="text-orange-600 font-bold mt-1">From UGX {{ item.min_price|floatformat:0 }}</p>
-                    {% else %}
-                        <p class="text-[11px] text-slate-400 mt-0.5">{{ item.product.unit.name|default:"PCS" }}</p>
-                        <p class="text-orange-600 font-bold mt-1">UGX {{ item.product.selling_price|floatformat:0 }}</p>
-                    {% endif %}
-                </div>
-                {% if item.is_group %}
-                    <a href="{% url 'product_detail' item.product.id %}" class="bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0 transition-colors shadow-sm">
-                        Select
-                    </a>
-                {% else %}
-                    {% if config.is_open %}
-                        <button hx-post="{% url 'add_to_cart' item.product.id %}" hx-swap="none" class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shrink-0 shadow-sm">
-                            <i data-lucide="plus" class="w-5 h-5"></i>
-                        </button>
-                    {% else %}
-                        <button disabled aria-label="Closed: store is not accepting orders" class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 cursor-not-allowed">
-                            <i data-lucide="x" class="w-5 h-5"></i>
-                        </button>
-                    {% endif %}
-                {% endif %}
-            </div>
+            {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product %}
         {% empty %}
-            <div class="col-span-full py-12 text-center bg-white rounded-2xl shadow-sm border border-slate-100">
-                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="search-x" class="w-8 h-8 text-slate-400"></i>
+            <div class="col-span-full rounded-2xl bg-white py-14 text-center shadow-card ring-1 ring-slate-900/5">
+                <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-slate-50">
+                    <i data-lucide="search-x" class="h-8 w-8 text-slate-400"></i>
                 </div>
-                <p class="text-slate-700 font-medium text-lg mb-1">No products found</p>
-                <p class="text-sm text-slate-500">Try searching for something else, like "milk" or "sugar".</p>
+                <p class="text-lg font-bold text-slate-700">No products found</p>
+                <p class="mt-1 text-sm text-slate-500">Try a different word, like “milk” or “sugar”.</p>
             </div>
         {% endfor %}
     </div>
 
 {% else %}
+    {# ---------------- Delivery promise ---------------- #}
+    {% if config.free_delivery_threshold > 0 %}
+    <div class="mb-5 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 ring-1 ring-brand-200/70">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-white">
+            <i data-lucide="bike" class="h-5 w-5"></i>
+        </span>
+        <p class="min-w-0">
+            <span class="block text-sm font-extrabold text-brand-800">Free delivery over UGX {{ config.free_delivery_threshold|floatformat:"0g" }}</span>
+            <span class="block text-xs text-brand-700">Delivered to apartments near the shop</span>
+        </p>
+    </div>
+    {% endif %}
+
+    {# ---------------- Categories ---------------- #}
+    <section class="mb-7" aria-labelledby="categories-title">
+        <h2 id="categories-title" class="mb-3 text-[17px] font-extrabold tracking-tight text-slate-800">Shop by category</h2>
+        <div class="grid grid-cols-4 gap-2.5 sm:grid-cols-6 md:grid-cols-8">
+            {% for group in groups %}
+                <a href="{% url 'product_list' group.id %}"
+                   class="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-2.5 text-center shadow-card ring-1 ring-slate-900/5 transition-transform active:scale-95">
+                    <span class="grid h-12 w-12 place-items-center rounded-xl text-2xl {% cycle 'bg-orange-100' 'bg-amber-100' 'bg-lime-100' 'bg-sky-100' 'bg-rose-100' %}" aria-hidden="true">{{ group.name|group_emoji }}</span>
+                    <span class="break-words text-[11px] font-semibold leading-tight text-slate-700">{{ group.name }}</span>
+                </a>
+            {% empty %}
+                <p class="col-span-full py-8 text-center text-slate-500">No categories yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    {# ---------------- Buy again ---------------- #}
     {% if frequent_products %}
-    <div class="mb-8">
-        <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
-            <i data-lucide="rotate-ccw" class="w-5 h-5 text-orange-500"></i> Buy Again
-        </h2>
-        <div class="flex overflow-x-auto gap-3 pb-2 snap-x">
+    <section class="mb-7" aria-labelledby="buy-again-title">
+        <h2 id="buy-again-title" class="mb-1 text-[17px] font-extrabold tracking-tight text-slate-800">Buy again</h2>
+        <div class="snap-row no-scrollbar">
             {% for product in frequent_products %}
-            <div class="min-w-[150px] w-[150px] bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-col justify-between snap-start relative group">
-                {% if product.image %}
-                <div class="w-full h-24 rounded-xl overflow-hidden mb-2 bg-slate-50 relative">
-                    <img src="{{ product.thumbnail_url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                <div class="w-[9.5rem]">
+                    {% include "marketplace/_product_card.html" with product=product %}
                 </div>
-                {% else %}
-                <div class="w-full h-24 rounded-xl bg-orange-50 mb-2 flex items-center justify-center text-orange-200 relative">
-                    <i data-lucide="shopping-basket" class="w-10 h-10"></i>
-                </div>
-                {% endif %}
-                <div>
-                    <a href="{% url 'product_detail' product.id %}" class="font-medium text-slate-800 text-sm line-clamp-2 leading-tight min-h-[2.5rem] hover:text-orange-600 transition-colors">{{ product.name }}</a>
-                    <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
-                </div>
-                <div class="mt-2 flex items-end justify-between">
-                    <p class="text-orange-600 font-bold text-sm">UGX {{ product.selling_price|floatformat:0 }}</p>
-                    {% if config.is_open %}
-                    <button
-                        hx-post="{% url 'add_to_cart' product.id %}"
-                        hx-swap="none"
-                        class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shadow-sm"
-                        aria-label="Add {{ product.name }} to cart">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                    </button>
-                    {% else %}
-                    <button disabled class="bg-slate-200 text-slate-400 cursor-not-allowed text-xs font-medium px-2 py-1 rounded-lg shrink-0">Closed</button>
-                    {% endif %}
-                </div>
-            </div>
             {% endfor %}
         </div>
-    </div>
+    </section>
     {% endif %}
 
+    {# ---------------- Featured ---------------- #}
     {% if featured_products %}
-    <div class="mb-8">
-        <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
-            <i data-lucide="sparkles" class="w-5 h-5 text-orange-500"></i> Featured Today
-        </h2>
-        <div class="flex overflow-x-auto gap-3 pb-2 snap-x">
+    <section class="mb-7" aria-labelledby="featured-title">
+        <h2 id="featured-title" class="mb-1 text-[17px] font-extrabold tracking-tight text-slate-800">Featured today</h2>
+        <div class="snap-row no-scrollbar">
             {% for product in featured_products %}
-            <div class="min-w-[150px] w-[150px] bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex flex-col justify-between snap-start relative group">
-                {% if product.image %}
-                <div class="w-full h-24 rounded-xl overflow-hidden mb-2 bg-slate-50 relative">
-                    <img src="{{ product.thumbnail_url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
-                    <div class="absolute top-0 left-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg z-10">PROMO</div>
+                <div class="w-[9.5rem]">
+                    {% include "marketplace/_product_card.html" with product=product promo=True %}
                 </div>
-                {% else %}
-                <div class="w-full h-24 rounded-xl bg-orange-50 mb-2 flex items-center justify-center text-orange-200 relative">
-                    <i data-lucide="shopping-basket" class="w-10 h-10"></i>
-                    <div class="absolute top-0 left-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg z-10">PROMO</div>
-                </div>
-                {% endif %}
-                <div>
-                    <a href="{% url 'product_detail' product.id %}" class="font-medium text-slate-800 text-sm line-clamp-2 leading-tight min-h-[2.5rem] hover:text-orange-600 transition-colors">{{ product.name }}</a>
-                    <p class="text-[11px] text-slate-400 mt-0.5">{{ product.unit.name|default:"PCS" }}</p>
-                </div>
-                <div class="mt-2 flex items-end justify-between">
-                    <p class="text-orange-600 font-bold text-sm">UGX {{ product.selling_price|floatformat:0 }}</p>
-                    {% if config.is_open %}
-                    <button
-                        hx-post="{% url 'add_to_cart' product.id %}"
-                        hx-swap="none"
-                        class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white flex items-center justify-center transition-colors active:scale-90 shadow-sm"
-                        aria-label="Add {{ product.name }} to cart">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                    </button>
-                    {% else %}
-                    <button disabled class="bg-slate-200 text-slate-400 cursor-not-allowed text-xs font-medium px-2 py-1 rounded-lg shrink-0">Closed</button>
-                    {% endif %}
-                </div>
-            </div>
             {% endfor %}
         </div>
-    </div>
+    </section>
     {% endif %}
-
-    {% if current_customer %}
-    <div class="mb-6 bg-orange-50 border border-orange-100 rounded-lg p-4">
-        <p class="text-orange-800 font-medium">Welcome back, {{ current_customer.name|default:"friend" }}!</p>
-        <p class="text-sm text-orange-600 mt-1">Your delivery details for {{ current_customer.apartment.name|default:"your apartment" }} are saved.</p>
-    </div>
-    {% endif %}
-
-    <h1 class="text-2xl font-bold mb-4 text-gray-800">Shop by Category</h1>
-
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-        {% for group in groups %}
-            <a href="{% url 'product_list' group.id %}"
-               class="bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-orange-200 transition-all duration-200 p-4 flex flex-col items-center justify-center text-center h-28 active:scale-95 group">
-                <span class="font-semibold text-slate-700 group-hover:text-orange-600 transition text-sm leading-tight">{{ group.name }}</span>
-            </a>
-        {% empty %}
-            <p class="col-span-full text-slate-500 text-center py-8">No categories found.</p>
-        {% endfor %}
-    </div>
 {% endif %}
 {% endblock %}
