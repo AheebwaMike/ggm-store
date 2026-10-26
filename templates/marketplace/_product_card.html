@@ -1,0 +1,92 @@
+{% comment %}
+Shared image-first product card (grids and carousels).
+
+Plain product (Buy Again / Featured carousels):
+    {% include "marketplace/_product_card.html" with product=product %}
+    {% include "marketplace/_product_card.html" with product=product promo=True %}
+
+Item from _group_products (search results and category pages):
+    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price %}
+
+The wrapper decides the width (grid cell, or w-40 shrink-0 inside .snap-row); the card fills it.
+Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is for the detail page.
+{% endcomment %}
+{% with thumb=product.thumbnail_url %}
+<article class="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
+
+    <div class="relative aspect-square bg-brand-50">
+        <a href="{% url 'product_detail' product.id %}"
+           class="absolute inset-0 block"
+           aria-label="View {{ parent_name|default:product.name }}">
+            {% if thumb %}
+                <img src="{{ thumb }}" alt="" width="300" height="300"
+                     loading="lazy" decoding="async"
+                     class="h-full w-full object-cover">
+            {% else %}
+                <span class="grid h-full w-full place-items-center text-orange-200">
+                    <i data-lucide="shopping-basket" class="h-12 w-12"></i>
+                </span>
+            {% endif %}
+        </a>
+
+        {% if promo %}
+            <span class="pointer-events-none absolute left-2 top-2 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">Promo</span>
+        {% elif is_group %}
+            <span class="pointer-events-none absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-700 shadow-sm">{{ variant_count }} options</span>
+        {% endif %}
+
+        {# Unavailable overlay: only for single products (for a group the cheapest option says nothing about the others) #}
+        {% if not is_group %}
+            {% if product.stock_quantity <= 0 or product.manually_disabled %}
+                <div class="pointer-events-none absolute inset-0 grid place-items-center bg-white/70">
+                    <span class="rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold text-white">Out of stock</span>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {# Action button, bottom-right of the image #}
+        {% if is_group %}
+            <a href="{% url 'product_detail' product.id %}"
+               class="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 shadow-card ring-1 ring-slate-900/5 transition-transform active:scale-90"
+               aria-label="Choose an option for {{ parent_name|default:product.name }}">
+                <i data-lucide="plus" class="h-5 w-5"></i>
+            </a>
+        {% elif not config.is_open %}
+            <span class="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-400" aria-label="Closed: the store is not taking orders">
+                <i data-lucide="lock" class="h-4 w-4"></i>
+            </span>
+        {% elif product.stock_quantity <= 0 or product.manually_disabled %}
+            {# no button: the overlay says why #}
+        {% else %}
+            <button type="button"
+                    hx-post="{% url 'add_to_cart' product.id %}"
+                    hx-swap="none"
+                    data-add-to-cart
+                    data-name="{{ product.name }}"
+                    class="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 shadow-card ring-1 ring-slate-900/5 transition-transform active:scale-90"
+                    aria-label="Add {{ product.name }} to cart">
+                <i data-lucide="plus" class="h-5 w-5"></i>
+            </button>
+        {% endif %}
+    </div>
+
+    <div class="flex flex-1 flex-col px-3 pb-3 pt-2.5">
+        {# Names wrap onto two lines instead of being clipped; the full name is on the product page #}
+        <a href="{% url 'product_detail' product.id %}"
+           class="line-clamp-2 min-h-[2.4rem] text-[13px] font-semibold leading-[1.2rem] text-slate-800">{{ parent_name|default:product.name }}</a>
+
+        {% if not is_group %}
+        <div class="mt-1 flex items-center gap-1.5">
+            {% if product.variant_label %}
+                <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{{ product.variant_label }}</span>
+            {% endif %}
+            <span class="truncate text-[11px] text-slate-400">{{ product.unit.name|default:"PCS" }}</span>
+        </div>
+        {% endif %}
+
+        <p class="mt-auto pt-2 text-[15px] font-extrabold tabular-nums text-brand-600">
+            {% if is_group %}<span class="text-[11px] font-semibold text-slate-400">From </span>UGX {{ min_price|floatformat:"0g" }}{% else %}UGX {{ product.selling_price|floatformat:"0g" }}{% endif %}
+        </p>
+    </div>
+</article>
+{% endwith %}

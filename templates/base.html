@@ -1,24 +1,41 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}GGM Store{% endblock %}</title>
 
-    <!-- Google Fonts: Inter -->
+    <!-- Font: Plus Jakarta Sans (friendly, geometric, good tabular numerals for prices) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Tailwind with custom config for Inter -->
+    <!-- Tailwind + design tokens (brand = the existing orange, so old orange-* classes still match) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    }
+                        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            800: '#9a3412',
+                        },
+                        canvas: '#f4f5f7',
+                    },
+                    boxShadow: {
+                        card: '0 1px 2px rgba(15,23,42,.05), 0 6px 16px -8px rgba(15,23,42,.14)',
+                        bar: '0 10px 30px -8px rgba(15,23,42,.45)',
+                        header: '0 8px 24px -12px rgba(194,65,12,.6)',
+                    },
                 }
             }
         }
@@ -44,28 +61,46 @@
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
     <link rel="icon" href="/static/icons/favicon.ico" type="image/x-icon">
 
-    <link rel="stylesheet" href="/static/css/style.css">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+    <!-- Bump ?v= whenever styles.css changes (the service worker caches static files cache-first) -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=1">
 
-    <!-- Top Header -->
-    <header class="bg-white shadow-sm sticky top-0 z-40 hidden md:block">
-        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="/" class="text-xl font-bold text-orange-600 tracking-tight flex items-center gap-2">
+    <!-- Lucide Icons (pin to an exact version once you have checked the one you want) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-canvas text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+    {# ---------- Desktop header ---------- #}
+    {% block desktop_header %}
+    <header class="hidden md:block sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200/70">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-6">
+            <a href="{% url 'home' %}" class="text-xl font-extrabold text-brand-600 tracking-tight flex items-center gap-2 shrink-0">
                 <i data-lucide="store" class="w-6 h-6"></i>
                 GGM Store
             </a>
-            <div class="flex items-center gap-6">
-                <a href="{% url 'customer_orders' %}" class="text-slate-600 hover:text-orange-600 font-medium text-sm transition">
-                    My Orders
-                </a>
-                <a href="/cart/" class="flex items-center gap-2 text-slate-700 hover:text-orange-600 font-medium transition">
+
+            <form method="get" action="{% url 'home' %}" role="search" class="relative flex-1 max-w-md">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                <input type="search" name="q" value="{{ query|default:'' }}" placeholder="Search milk, sugar, soap…"
+                       class="w-full h-10 rounded-full bg-slate-100 pl-10 pr-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-brand-500/40">
+            </form>
+
+            <div class="flex items-center gap-5 ml-auto">
+                {% if config.is_open %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-50 rounded-full px-2.5 py-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Open
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold text-red-700 bg-red-50 rounded-full px-2.5 py-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Closed
+                </span>
+                {% endif %}
+                <a href="{% url 'customer_orders' %}" class="text-slate-600 hover:text-brand-600 font-semibold text-sm transition">My orders</a>
+                <a href="{% url 'cart_view' %}" class="flex items-center gap-2 text-slate-700 hover:text-brand-600 font-semibold text-sm transition">
                     <i data-lucide="shopping-bag" class="w-5 h-5"></i>
                     Cart
                     <span id="cart-count-desktop"
-                          class="text-xs bg-orange-600 text-white rounded-full px-2 py-0.5 min-w-[20px] text-center font-bold"
+                          class="hidden items-center justify-center text-[11px] bg-brand-600 text-white rounded-full px-1.5 min-w-[20px] h-5 font-bold"
                           hx-get="{% url 'cart_count' %}"
                           hx-trigger="load, cartUpdated from:body"
                           hx-swap="innerHTML">0</span>
@@ -73,45 +108,103 @@
             </div>
         </div>
     </header>
+    {% endblock %}
 
-    <!-- Main Content -->
-    <main class="flex-1 max-w-5xl mx-auto w-full px-4 py-6 pb-24 md:pb-6">
+    {# ---------- Mobile header: pages override this block with the app bar ---------- #}
+    {% block mobile_header %}
+    <header class="md:hidden relative bg-brand-600 text-white pt-safe rounded-b-[1.75rem] shadow-header">
+        <div class="px-4 pt-3 pb-5">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-medium text-orange-100 leading-none">Deliver to</p>
+                    <p class="mt-1.5 flex items-center gap-1.5 min-w-0 text-base font-bold leading-tight">
+                        <i data-lucide="map-pin" class="w-4 h-4 shrink-0"></i>
+                        <span class="truncate">{% if current_customer.apartment %}{{ current_customer.apartment.name }}{% else %}Nearby apartments{% endif %}</span>
+                    </p>
+                </div>
+                {% if config.is_open %}
+                <span class="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold bg-white/20 rounded-full px-3 py-1.5">
+                    <span class="w-2 h-2 rounded-full bg-green-400"></span> Open
+                </span>
+                {% else %}
+                <span class="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold bg-black/25 rounded-full px-3 py-1.5">
+                    <span class="w-2 h-2 rounded-full bg-red-400"></span> Closed
+                </span>
+                {% endif %}
+            </div>
+
+            <form method="get" action="{% url 'home' %}" role="search" class="relative mt-3.5">
+                <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                <input type="search" name="q" value="{{ query|default:'' }}" placeholder="Search milk, sugar, soap…"
+                       aria-label="Search products"
+                       class="w-full h-12 rounded-full bg-white text-slate-800 pl-12 pr-4 text-[15px] font-medium shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-white/30">
+            </form>
+        </div>
+    </header>
+    {% endblock %}
+
+    {# ---------- Main content ---------- #}
+    <main class="flex-1 w-full max-w-5xl mx-auto px-4 pt-5 pb-40 md:pb-10">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Mobile Bottom Navigation -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 pb-safe">
-        <div class="flex justify-around items-center h-16">
-            <a href="/" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-orange-600 transition">
-                <i data-lucide="home" class="w-6 h-6 mb-1"></i>
-                <span class="text-[10px] font-medium">Home</span>
-            </a>
-
-            <a href="{% url 'customer_orders' %}" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-orange-600 transition">
-                <i data-lucide="receipt" class="w-6 h-6 mb-1"></i>
-                <span class="text-[10px] font-medium">Orders</span>
-            </a>
-
-            <a href="/cart/" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-orange-600 transition relative">
-                <div class="relative">
-                    <i data-lucide="shopping-bag" class="w-6 h-6 mb-1"></i>
-                    <span id="cart-count-mobile"
-                          class="absolute -top-1 -right-2 text-[10px] bg-orange-600 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center font-bold"
-                          hx-get="{% url 'cart_count' %}"
-                          hx-trigger="load, cartUpdated from:body"
-                          hx-swap="innerHTML">0</span>
-                </div>
-                <span class="text-[10px] font-medium">Cart</span>
-            </a>
-        </div>
-    </nav>
-
-    <!-- Footer -->
-    <footer class="bg-gray-100 text-center text-sm text-gray-500 py-4">
+    {# ---------- Footer (desktop only; on phones it would sit under the nav) ---------- #}
+    <footer class="hidden md:block text-center text-sm text-slate-500 py-6">
         &copy; {% now "Y" %} GGM Store. Delivering to nearby apartments.
     </footer>
 
+    {# ---------- Floating cart bar (filled by /cart/bar/, empty when the cart is empty) ---------- #}
+    {% block cart_bar %}
+    <div id="cart-bar"
+         class="cart-bar-pos fixed inset-x-0 z-40 px-3 pointer-events-none"
+         hx-get="{% url 'cart_bar' %}"
+         hx-trigger="load, cartUpdated from:body"
+         hx-swap="innerHTML"></div>
+    {% endblock %}
+
+    {# ---------- Toast ---------- #}
+    <div id="ggm-toast" role="status" aria-live="polite"
+         class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-bar truncate"></div>
+
+    {# ---------- Mobile bottom navigation ---------- #}
+    {% block bottom_nav %}
+    {% with u=request.resolver_match.url_name %}
+    <nav class="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200/80 pb-safe" aria-label="Main">
+        <div class="grid grid-cols-3 h-16">
+            <a href="{% url 'home' %}"
+               {% if u == 'home' or u == 'product_list' or u == 'product_detail' %}aria-current="page"{% endif %}
+               class="flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors {% if u == 'home' or u == 'product_list' or u == 'product_detail' %}nav-active text-brand-600{% else %}text-slate-400{% endif %}">
+                <i data-lucide="home" class="w-6 h-6"></i>
+                Home
+            </a>
+
+            <a href="{% url 'customer_orders' %}"
+               {% if u == 'customer_orders' or u == 'customer_order_detail' or u == 'order_success' %}aria-current="page"{% endif %}
+               class="flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors {% if u == 'customer_orders' or u == 'customer_order_detail' or u == 'order_success' %}nav-active text-brand-600{% else %}text-slate-400{% endif %}">
+                <i data-lucide="receipt" class="w-6 h-6"></i>
+                Orders
+            </a>
+
+            <a href="{% url 'cart_view' %}"
+               {% if u == 'cart_view' or u == 'checkout' %}aria-current="page"{% endif %}
+               class="flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors {% if u == 'cart_view' or u == 'checkout' %}nav-active text-brand-600{% else %}text-slate-400{% endif %}">
+                <span class="relative">
+                    <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+                    <span id="cart-count-mobile"
+                          class="hidden absolute -top-1.5 -right-2.5 items-center justify-center text-[10px] bg-brand-600 text-white rounded-full px-1 min-w-[18px] h-[18px] font-bold ring-2 ring-white"
+                          hx-get="{% url 'cart_count' %}"
+                          hx-trigger="load, cartUpdated from:body"
+                          hx-swap="innerHTML">0</span>
+                </span>
+                Cart
+            </a>
+        </div>
+    </nav>
+    {% endwith %}
+    {% endblock %}
+
     <script>
+        // ---- Service worker + web push (unchanged behaviour) ----
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js', { scope: '/' })
@@ -206,10 +299,59 @@
             return Uint8Array.from(rawData, (character) => character.charCodeAt(0));
         }
     </script>
+
+    <script>
+        // ---- Shared UI behaviour: toast, cart badges, icons after swaps, add-to-cart feedback ----
+        (function () {
+            const toast = document.getElementById('ggm-toast');
+            let toastTimer;
+
+            window.ggmToast = function (message, kind) {
+                if (!toast) return;
+                toast.textContent = message;
+                toast.classList.toggle('bg-red-600', kind === 'error');
+                toast.classList.toggle('bg-slate-900', kind !== 'error');
+                toast.classList.add('show');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+            };
+
+            function syncCartBadges() {
+                document.querySelectorAll('#cart-count-desktop, #cart-count-mobile').forEach((el) => {
+                    const count = parseInt(el.textContent, 10) || 0;
+                    el.classList.toggle('hidden', count === 0);
+                });
+            }
+
+            // HTMX swaps bring in new <i data-lucide> placeholders.
+            document.addEventListener('htmx:afterSwap', function () {
+                if (window.lucide) window.lucide.createIcons();
+                syncCartBadges();
+            });
+
+            // Any control marked data-add-to-cart gets a pop animation and a toast.
+            document.addEventListener('htmx:afterRequest', function (evt) {
+                const el = evt.detail.elt;
+                if (!el || !el.hasAttribute || !el.hasAttribute('data-add-to-cart')) return;
+
+                if (evt.detail.successful) {
+                    el.classList.add('pop');
+                    setTimeout(() => el.classList.remove('pop'), 320);
+                    const name = el.getAttribute('data-name');
+                    window.ggmToast(name ? 'Added: ' + name : 'Added to cart');
+                } else if (evt.detail.xhr && evt.detail.xhr.status === 403) {
+                    window.ggmToast('The store is closed right now', 'error');
+                } else {
+                    window.ggmToast('Could not add that item. Try again.', 'error');
+                }
+            });
+        })();
+    </script>
     <script>
         if (window.lucide) {
             window.lucide.createIcons();
         }
     </script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>
