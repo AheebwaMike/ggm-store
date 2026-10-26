@@ -1,7 +1,6 @@
-# marketplace/models.py
-from cloudinary import CloudinaryImage
-from cloudinary_storage.storage import MediaCloudinaryStorage
 from django.db import models
+
+from marketplace.storage import CloudinaryMediaStorage
 
 class ProductGroup(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -46,25 +45,18 @@ class Product(models.Model):
     )
     manually_disabled = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True) # Toggle to hide out-of-stock or disabled items
-    image = models.ImageField(upload_to='products/', null=True, blank=True)
+    image = models.ImageField(
+        upload_to='products/',
+        null=True,
+        blank=True,
+        storage=CloudinaryMediaStorage(),
+    )
 
     @property
     def thumbnail_url(self):
-        if not self.image:
-            return None
-
-        public_id = getattr(self.image, 'public_id', None)
-        if public_id is None and isinstance(self.image.storage, MediaCloudinaryStorage):
-            public_id = self.image.name
-        if public_id:
-            return CloudinaryImage(public_id).build_url(
-                width=300,
-                height=300,
-                crop='fill',
-                quality='auto',
-                fetch_format='auto',
-            )
-        return self.image.url
+        if self.image:
+            return self.image.url
+        return None
     
     def __str__(self):
         return f"{self.code} - {self.name}"

@@ -55,7 +55,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'cloudinary',
-    'cloudinary_storage',
 
     # custom apps
     'marketplace',
@@ -156,23 +155,21 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
-}
-
-MEDIA_STORAGE_BACKEND = (
-    'cloudinary_storage.storage.MediaCloudinaryStorage'
-    if all(CLOUDINARY_STORAGE.values())
-    else 'django.core.files.storage.FileSystemStorage'
-)
+CLOUDINARY_CONFIGURED = all([
+    os.getenv('CLOUDINARY_CLOUD_NAME'),
+    os.getenv('CLOUDINARY_API_KEY'),
+    os.getenv('CLOUDINARY_API_SECRET'),
+])
 
 STORAGES = {
     'default': {
-        'BACKEND': MEDIA_STORAGE_BACKEND,
+        'BACKEND': (
+            'marketplace.storage.CloudinaryMediaStorage'
+            if CLOUDINARY_CONFIGURED
+            else 'django.core.files.storage.FileSystemStorage'
+        ),
     },
     'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }

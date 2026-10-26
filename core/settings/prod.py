@@ -14,15 +14,6 @@ DATABASES = {
     )
 }
 
-STORAGES = {
-    'default': {
-        'BACKEND': MEDIA_STORAGE_BACKEND,
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
-}
-
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True

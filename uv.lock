@@ -450,19 +450,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-cloudinary-storage"
-version = "0.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cloudinary" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/72/da/6072905410b869566d3cb9f6706803d0a9d2052d90e0b8ed783031acdb6d/django-cloudinary-storage-0.3.0.tar.gz", hash = "sha256:debd403a5f225c9d35c4af508ff4abc7fdc262129464134b60b2feeb2c44d3e1", size = 21669, upload-time = "2020-08-23T22:19:57.854Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/e2/e52f63ddafa0985e2af70197c4d3e18963d0ea854083fc23705b88014891/django_cloudinary_storage-0.3.0-py3-none-any.whl", hash = "sha256:95c855c7334141b2a485ea7eb5716de87bb6ce0d848e205debb3a3ab7bbbd49a", size = 18866, upload-time = "2020-08-23T22:19:55.767Z" },
-]
-
-[[package]]
 name = "et-xmlfile"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -520,7 +507,6 @@ dependencies = [
     { name = "cloudinary" },
     { name = "dj-database-url" },
     { name = "django" },
-    { name = "django-cloudinary-storage" },
     { name = "gunicorn" },
     { name = "openpyxl" },
     { name = "psycopg", extra = ["binary"] },
@@ -542,7 +528,6 @@ requires-dist = [
     { name = "cloudinary", specifier = ">=1.46.3" },
     { name = "dj-database-url", specifier = ">=3.1.2" },
     { name = "django", specifier = ">=6.1.2" },
-    { name = "django-cloudinary-storage", specifier = ">=0.3.0" },
     { name = "gunicorn", specifier = ">=26.2.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
