@@ -1,0 +1,20 @@
+{% comment %}
+Large product image. Used in two places:
+  1. product_detail.html renders it normally.
+  2. _product_variant_detail.html renders it again when HTMX asks for a variant, with
+     hx-swap-oob so the picture on the page changes along with the price.
+This is the one place the full-size original (product.image.url) is used.
+{% endcomment %}
+<div id="product-hero"
+     {% if request.META.HTTP_HX_REQUEST %}hx-swap-oob="true"{% endif %}
+     class="relative aspect-square w-full overflow-hidden bg-brand-50 md:aspect-[4/3]">
+    {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}"
+             fetchpriority="high" decoding="async"
+             class="h-full w-full object-contain">
+    {% else %}
+        <span class="grid h-full w-full place-items-center text-orange-200">
+            <i data-lucide="shopping-basket" class="h-24 w-24"></i>
+        </span>
+    {% endif %}
+</div>

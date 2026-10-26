@@ -68,6 +68,7 @@ def _group_products(queryset):
 
         display_items.append({
             'product': product,
+            'image_product': product,
             'is_group': False,
             'min_price': product.selling_price,
             'max_price': product.selling_price,
@@ -77,8 +78,11 @@ def _group_products(queryset):
     for parent_name, variants in grouped.items():
         variants.sort(key=lambda variant: (variant.selling_price, variant.name))
         representative = variants[0]
+        image_product = next((v for v in variants if v.image), representative)
+
         display_items.append({
             'product': representative,
+            'image_product': image_product,
             'is_group': True,
             'min_price': variants[0].selling_price,
             'max_price': variants[-1].selling_price,
@@ -108,7 +112,7 @@ def home(request):
         featured_in__in=active_campaigns,
         is_active=True,
         selling_price__gt=0,
-    ).distinct()[:12]
+    ).select_related('unit').distinct()[:12]
     current_customer = None
 
     customer_id = request.session.get('customer_id')
@@ -124,7 +128,7 @@ def home(request):
             orderitem__order__customer=current_customer,
             is_active=True,
             selling_price__gt=0,
-        ).annotate(
+        ).select_related('unit').annotate(
             times_ordered=Count('orderitem')
         ).order_by('-times_ordered')[:6]
 
@@ -133,7 +137,7 @@ def home(request):
             Q(name__icontains=query) | Q(code__icontains=query),
             is_active=True,
             selling_price__gt=0,
-        ).order_by('name')[:50]
+        ).select_related('unit').order_by('name')[:50]
         search_results = _group_products(raw_products)[:50]
 
     config = _get_store_config()
@@ -152,7 +156,7 @@ def product_list(request, group_id):
     group = get_object_or_404(ProductGroup, id=group_id)
     raw_products = Product.objects.filter(
         group=group, is_active=True, selling_price__gt=0
-    ).order_by('name')
+    ).select_related('unit').order_by('name')
     products = _group_products(raw_products)
     return render(request, 'marketplace/product_list.html', {
         'group': group,
@@ -187,6 +191,9 @@ def add_to_cart(request, product_id):
         return HttpResponseForbidden("Store is closed")
 
     product = get_object_or_404(Product, id=product_id, is_active=True)
+    if product.manually_disabled or (product.stock_quantity or 0) <= 0:
+        return HttpResponse('Out of stock', status=409)
+
     cart = _get_cart(request)
     key = str(product.id)
     cart[key] = int(cart.get(key, 0)) + 1
