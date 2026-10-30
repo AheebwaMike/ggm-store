@@ -10,7 +10,7 @@
     <span class="min-w-0 flex-1">
         <span class="block text-sm font-bold leading-tight">View cart</span>
         <span class="block truncate text-[11px] leading-tight text-slate-300">
-            {% if amount_for_free_delivery > 0 %}Add UGX {{ amount_for_free_delivery|floatformat:"0g" }} more for free delivery{% else %}Free delivery unlocked{% endif %}
+            {% if amount_for_minimum > 0 %}Add UGX {{ amount_for_minimum|floatformat:"0g" }} more to check out{% elif amount_for_free_delivery > 0 %}Add UGX {{ amount_for_free_delivery|floatformat:"0g" }} more for free delivery{% else %}Free delivery unlocked{% endif %}
         </span>
     </span>
 

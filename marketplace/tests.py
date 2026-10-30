@@ -333,6 +333,37 @@ class DeliveryPricingTests(TestCase):
         )
         self.assertContains(response, 'FREE')
 
+    def test_cart_uses_saved_apartment_and_shows_minimum_order_amount(self):
+        self.apartment.delivery_fee_override = Decimal('500.00')
+        self.apartment.save()
+        self.config.minimum_order_value = Decimal('40000.00')
+        self.config.save()
+        customer = Customer.objects.create(
+            phone_number='0701234567',
+            apartment=self.apartment,
+        )
+        session = self.client.session
+        session['customer_id'] = customer.pk
+        session.save()
+
+        cart_response = self.client.get('/cart/')
+        self.assertContains(cart_response, 'UGX 500')
+        self.assertEqual(
+            cart_response.context['amount_for_minimum'],
+            Decimal('25000.00'),
+        )
+
+        bar_response = self.client.get('/cart/bar/')
+        self.assertContains(bar_response, 'Add UGX 25,000 more to check out')
+
+        update_response = self.client.post(
+            f'/cart/update/{self.product.pk}/',
+            {'action': 'inc'},
+        )
+        self.assertEqual(update_response['HX-Trigger'], 'cartUpdated')
+        self.assertContains(update_response, 'UGX 500')
+        self.assertContains(update_response, 'Add items to meet the minimum order value')
+
     def test_cart_and_checkout_summary_show_variant_and_product_link(self):
         self.product.parent_group = 'Test Sugar'
         self.product.variant_label = '25KG'
@@ -913,6 +944,17 @@ class WhatsAppIntegrationTests(TestCase):
         )
         self.assertContains(success_response, 'WhatsApp Us')
         self.assertContains(success_response, 'https://wa.me/256770000000?text=')
+
+    def test_order_success_requires_the_order_customer_in_session(self):
+        response = self.client.get(f'/order/success/{self.order.pk}/')
+        self.assertRedirects(response, '/')
+
+        other_customer = Customer.objects.create(phone_number='0709876543')
+        session = self.client.session
+        session['customer_id'] = other_customer.pk
+        session.save()
+        response = self.client.get(f'/order/success/{self.order.pk}/')
+        self.assertEqual(response.status_code, 404)
 
 
 class StaffOrderPushNotificationTests(TestCase):
