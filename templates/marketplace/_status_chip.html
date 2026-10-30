@@ -1,0 +1,22 @@
+{# Usage: {% include "marketplace/_status_chip.html" with status=order.status %} #}
+{% if status == 'new' %}
+    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-bold text-yellow-700 ring-1 ring-yellow-200">
+        <span class="h-1.5 w-1.5 rounded-full bg-yellow-500"></span> Pending
+    </span>
+{% elif status == 'confirmed' %}
+    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+        <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span> Confirmed
+    </span>
+{% elif status == 'packed' %}
+    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 ring-1 ring-indigo-200">
+        <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span> On the way
+    </span>
+{% elif status == 'delivered' %}
+    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-700 ring-1 ring-green-200">
+        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Delivered
+    </span>
+{% else %}
+    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700 ring-1 ring-red-200">
+        <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> Cancelled
+    </span>
+{% endif %}

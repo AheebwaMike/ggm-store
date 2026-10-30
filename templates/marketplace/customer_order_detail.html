@@ -2,86 +2,96 @@
 
 {% block title %}Order #{{ order.id }} - GGM Store{% endblock %}
 
+{% block mobile_header %}
+    {% url 'customer_orders' as orders_url %}
+    {% include "marketplace/_app_bar.html" with title="Order details" back_url=orders_url %}
+{% endblock %}
+
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <a href="{% url 'customer_orders' %}" class="text-sm text-slate-500 hover:text-orange-600 font-medium mb-6 inline-flex items-center gap-1 transition-colors">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to My Orders
+<div class="mx-auto max-w-2xl space-y-4">
+    <a href="{% url 'customer_orders' %}" class="hidden items-center gap-1 text-sm font-semibold text-slate-500 transition-colors hover:text-brand-600 md:inline-flex">
+        <i data-lucide="arrow-left" class="h-4 w-4"></i> Back to my orders
     </a>
 
     {% if order.is_modified %}
-    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-6 flex items-start gap-2">
-        <i data-lucide="info" class="w-4 h-4 text-yellow-600 shrink-0 mt-0.5"></i>
-        <p class="text-xs text-yellow-800 font-medium">The store made changes to your order due to stock availability. The total has been updated accordingly.</p>
+    <div class="flex items-start gap-2 rounded-xl bg-yellow-50 p-3 ring-1 ring-yellow-200">
+        <i data-lucide="info" class="mt-0.5 h-4 w-4 shrink-0 text-yellow-600"></i>
+        <p class="text-xs font-medium text-yellow-800">The store made changes to your order because of stock availability. The total has been updated.</p>
     </div>
     {% endif %}
 
-    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-4">
-        <h1 class="text-xl font-bold text-slate-800 mb-6 flex items-center justify-between">
-            <span>Order #{{ order.id }}</span>
-            <span class="text-sm font-medium text-slate-400">{{ order.created_at|date:"d M Y, H:i" }}</span>
-        </h1>
+    {# Live status (polls itself while the order is active) #}
+    {% include "marketplace/_order_status_partial.html" %}
 
-        {% include "marketplace/_order_status_partial.html" %}
-
-        <div class="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
-            <div class="p-5">
-                <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i data-lucide="receipt" class="w-4 h-4 text-slate-400"></i> Items
-                </h2>
-                <div class="space-y-3">
-                    {% for item in order.items.all %}
-                    <div class="flex justify-between text-sm items-start">
-                        <div class="flex gap-2">
-                            <span class="text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded">{{ item.quantity }}x</span>
-                            <span class="text-slate-700 font-medium">
-                                {% if item.product %}{{ item.product.parent_group|default:item.product.name }}{% else %}Removed product{% endif %}
-                                {% if item.product.variant_label %}
-                                    <span class="text-[10px] bg-slate-200 text-slate-600 font-bold px-1.5 py-0.5 rounded ml-1">{{ item.product.variant_label }}</span>
-                                {% endif %}
-                            </span>
-                        </div>
-                        <span class="font-bold text-slate-800">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="relative h-4 border-t border-dashed border-slate-200">
-                <div class="absolute -left-2 -top-2 w-4 h-4 bg-white rounded-full"></div>
-                <div class="absolute -right-2 -top-2 w-4 h-4 bg-white rounded-full"></div>
-            </div>
-
-            <div class="p-5 bg-white">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-slate-500 font-medium text-sm">Payment Method</span>
-                    <span class="font-bold text-slate-800 text-sm">{{ order.get_payment_method_display }}</span>
-                </div>
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-slate-500 font-medium text-sm">Delivery Fee</span>
-                    <span class="font-medium text-slate-700 text-sm">{% if order.delivery_fee == 0 %}FREE{% else %}UGX {{ order.delivery_fee|floatformat:0 }}{% endif %}</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-lg font-bold text-slate-800">Total</span>
-                    <span class="text-2xl font-bold text-orange-600">UGX {{ order.total_amount|floatformat:0 }}</span>
-                </div>
-            </div>
+    {# Items #}
+    <section class="rounded-2xl bg-white p-5 shadow-card ring-1 ring-slate-900/5">
+        <div class="mb-1 flex items-baseline justify-between gap-3">
+            <h2 class="text-base font-extrabold text-slate-800">Items</h2>
+            <p class="text-xs text-slate-400">Placed {{ order.created_at|date:"d M Y, H:i" }}</p>
         </div>
-    </div>
+        <ul class="divide-y divide-slate-100">
+            {% for item in order.items.all %}
+            <li class="flex items-center gap-3 py-3">
+                {% include "marketplace/_thumb.html" with product=item.product box="h-12 w-12" %}
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-semibold leading-snug text-slate-800">
+                        {% if item.product %}{{ item.product.parent_group|default:item.product.name }}{% else %}Removed product{% endif %}
+                        {% if item.product.variant_label %}
+                            <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-bold text-slate-600">{{ item.product.variant_label }}</span>
+                        {% endif %}
+                    </p>
+                    <p class="mt-0.5 text-xs tabular-nums text-slate-400">{{ item.quantity }} × UGX {{ item.price_at_time_of_order|floatformat:"0g" }}</p>
+                </div>
+                {% widthratio item.price_at_time_of_order 1 item.quantity as line_total %}
+                <span class="shrink-0 text-sm font-bold tabular-nums text-slate-800">UGX {{ line_total|floatformat:"0g" }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
 
-    <div class="bg-orange-50 rounded-2xl p-5 text-center border border-orange-100">
-        <p class="text-sm text-orange-800 font-medium mb-2">Need help with this order?</p>
-        <div class="flex flex-col sm:flex-row gap-2 justify-center">
-            <a href="tel:+256790167543" class="inline-flex items-center justify-center gap-2 bg-white text-orange-600 font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
-                <i data-lucide="phone-call" class="w-4 h-4"></i> Call the Shop
+    {% if order.note %}
+    <section class="rounded-2xl bg-white p-5 shadow-card ring-1 ring-slate-900/5">
+        <h2 class="mb-1.5 flex items-center gap-2 text-sm font-extrabold text-slate-800">
+            <i data-lucide="message-square" class="h-4 w-4 text-slate-400"></i> Delivery instructions
+        </h2>
+        <p class="text-sm text-slate-600">{{ order.note }}</p>
+    </section>
+    {% endif %}
+
+    {# Receipt #}
+    <section class="rounded-2xl bg-white p-5 shadow-card ring-1 ring-slate-900/5">
+        <dl class="space-y-2 text-sm">
+            <div class="flex items-center justify-between">
+                <dt class="text-slate-500">Payment method</dt>
+                <dd class="font-bold text-slate-800">{{ order.get_payment_method_display }}</dd>
+            </div>
+            <div class="flex items-center justify-between">
+                <dt class="text-slate-500">Delivery fee</dt>
+                <dd class="font-semibold tabular-nums text-slate-700">{% if order.delivery_fee == 0 %}<span class="text-green-600">FREE</span>{% else %}UGX {{ order.delivery_fee|floatformat:"0g" }}{% endif %}</dd>
+            </div>
+            <div class="flex items-center justify-between border-t border-dashed border-slate-200 pt-3">
+                <dt class="text-base font-bold text-slate-800">Total</dt>
+                <dd class="text-2xl font-extrabold tabular-nums text-brand-600">UGX {{ order.total_amount|floatformat:"0g" }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    {# Help #}
+    <section class="rounded-2xl bg-brand-50 p-5 text-center ring-1 ring-brand-200/70">
+        <p class="mb-3 text-sm font-semibold text-brand-800">Need help with this order?</p>
+        <div class="flex flex-col justify-center gap-2 sm:flex-row">
+            <a href="tel:{% if config.whatsapp_number %}+{{ config.whatsapp_number|cut:'+'|cut:' ' }}{% else %}+256790167543{% endif %}"
+               class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-brand-700 shadow-sm transition hover:shadow-md active:scale-[0.98]">
+                <i data-lucide="phone-call" class="h-4 w-4"></i> Call the shop
             </a>
             {% if config.whatsapp_number %}
             <a href="https://wa.me/{{ config.whatsapp_number }}?text={{ whatsapp_message|urlencode }}"
                target="_blank" rel="noopener noreferrer"
-               class="inline-flex items-center justify-center gap-2 bg-[#25D366] text-white font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
-                <i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp Us
+               class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:shadow-md active:scale-[0.98]">
+                <i data-lucide="message-circle" class="h-4 w-4"></i> WhatsApp us
             </a>
             {% endif %}
         </div>
-    </div>
+    </section>
 </div>
 {% endblock %}

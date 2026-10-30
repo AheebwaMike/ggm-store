@@ -1,113 +1,118 @@
 {% if items %}
-    <div class="space-y-3">
+    {# Free delivery progress #}
+    {% if amount_for_free_delivery > 0 %}
+    <div class="mb-4 rounded-2xl bg-brand-50 p-3.5 ring-1 ring-brand-200/70">
+        <div class="flex items-center gap-2.5">
+            <i data-lucide="bike" class="h-5 w-5 shrink-0 text-brand-600"></i>
+            <p class="text-xs font-semibold text-brand-800">Add <strong class="font-extrabold">UGX {{ amount_for_free_delivery|floatformat:"0g" }}</strong> more for free delivery</p>
+        </div>
+        <div class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-brand-200/70">
+            <div class="h-2 rounded-full bg-brand-600 transition-all duration-500" style="width: {% widthratio subtotal config.free_delivery_threshold 100 %}%"></div>
+        </div>
+    </div>
+    {% else %}
+    <div class="mb-4 flex items-center gap-2.5 rounded-2xl bg-green-50 p-3.5 ring-1 ring-green-200">
+        <i data-lucide="party-popper" class="h-5 w-5 shrink-0 text-green-600"></i>
+        <p class="text-xs font-bold text-green-800">You’ve unlocked free delivery</p>
+    </div>
+    {% endif %}
+
+    <ul class="space-y-3">
         {% for item in items %}
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3">
-                <div class="w-16 h-16 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden border border-slate-100">
-                    {% if item.product.image %}
-                        <img src="{{ item.product.thumbnail_url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover">
-                    {% else %}
-                        <i data-lucide="shopping-basket" class="w-8 h-8 text-orange-200"></i>
-                    {% endif %}
-                </div>
+        <li class="flex gap-3 rounded-2xl bg-white p-3 shadow-card ring-1 ring-slate-900/5">
+            <a href="{% url 'product_detail' item.product.id %}" aria-label="View {{ item.product.name }}">
+                {% include "marketplace/_thumb.html" with product=item.product box="h-[4.5rem] w-[4.5rem]" %}
+            </a>
 
-                <div class="flex-1 min-w-0">
-                    <a href="{% url 'product_detail' item.product.id %}" class="font-medium text-slate-800 text-sm truncate hover:text-orange-600 transition-colors block">
-                        {{ item.product.parent_group|default:item.product.name }}
-                    </a>
-                    {% if item.product.variant_label %}
-                        <span class="inline-block bg-slate-100 text-slate-600 text-[10px] font-bold px-1.5 py-0.5 rounded mt-1">{{ item.product.variant_label }}</span>
-                    {% endif %}
-                    <p class="text-[11px] text-slate-400 mt-1">UGX {{ item.product.selling_price|floatformat:0 }} × {{ item.quantity }}</p>
-                    <p class="text-orange-600 font-bold text-sm mt-1">UGX {{ item.line_total|floatformat:0 }}</p>
-                </div>
+            <div class="flex min-w-0 flex-1 flex-col">
+                {# Full name, wrapping: never clipped #}
+                <a href="{% url 'product_detail' item.product.id %}" class="text-sm font-semibold leading-snug text-slate-800">{{ item.product.parent_group|default:item.product.name }}</a>
+                {% if item.product.variant_label %}
+                    <span class="mt-1 w-fit rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{{ item.product.variant_label }}</span>
+                {% endif %}
+                <p class="mt-0.5 text-[11px] tabular-nums text-slate-400">UGX {{ item.product.selling_price|floatformat:"0g" }} each</p>
 
-                <div class="flex flex-col items-end gap-2 shrink-0">
-                    <button hx-post="{% url 'cart_update' item.product.id %}"
-                            hx-vals='{"action":"remove"}'
-                            hx-target="#cart-body" hx-swap="innerHTML"
-                            class="text-slate-400 hover:text-red-500 transition-colors p-1"
-                            title="Remove item" aria-label="Remove {{ item.product.name }} from cart">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-
-                    <div class="flex items-center bg-slate-50 rounded-full border border-slate-200 p-1">
+                <div class="mt-auto flex items-center justify-between gap-2 pt-2">
+                    <div class="flex items-center rounded-full bg-slate-100 p-0.5">
                         <button hx-post="{% url 'cart_update' item.product.id %}"
                                 hx-vals='{"action":"dec"}'
                                 hx-target="#cart-body" hx-swap="innerHTML"
-                                class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white hover:shadow-sm text-slate-600 transition-all active:scale-95"
-                                aria-label="Decrease {{ item.product.name }} quantity">
-                            <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                                class="grid h-8 w-8 place-items-center rounded-full text-slate-600 transition active:scale-90 active:bg-white {% if item.quantity == 1 %}text-red-500{% endif %}"
+                                aria-label="{% if item.quantity == 1 %}Remove {{ item.product.name }} from cart{% else %}Decrease {{ item.product.name }} quantity{% endif %}">
+                            <i data-lucide="{% if item.quantity == 1 %}trash-2{% else %}minus{% endif %}" class="h-4 w-4"></i>
                         </button>
-                        <span class="w-6 text-center font-medium text-sm text-slate-800">{{ item.quantity }}</span>
+                        <span class="w-7 text-center text-sm font-bold tabular-nums text-slate-800">{{ item.quantity }}</span>
                         {% if config.is_open %}
                             <button hx-post="{% url 'cart_update' item.product.id %}"
                                     hx-vals='{"action":"inc"}'
                                     hx-target="#cart-body" hx-swap="innerHTML"
-                                    class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white hover:shadow-sm text-slate-600 transition-all active:scale-95"
+                                    class="grid h-8 w-8 place-items-center rounded-full text-slate-600 transition active:scale-90 active:bg-white"
                                     aria-label="Increase {{ item.product.name }} quantity">
-                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                <i data-lucide="plus" class="h-4 w-4"></i>
                             </button>
                         {% else %}
                             <button type="button" disabled
-                                    class="w-7 h-7 rounded-full flex items-center justify-center text-slate-300 cursor-not-allowed"
-                                    aria-label="Store is closed">
-                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    class="grid h-8 w-8 cursor-not-allowed place-items-center rounded-full text-slate-300"
+                                    aria-label="The store is closed">
+                                <i data-lucide="plus" class="h-4 w-4"></i>
                             </button>
                         {% endif %}
                     </div>
+                    <span class="text-[15px] font-extrabold tabular-nums text-brand-600">UGX {{ item.line_total|floatformat:"0g" }}</span>
                 </div>
             </div>
+        </li>
         {% endfor %}
-    </div>
+    </ul>
 
-    {% if amount_for_free_delivery > 0 %}
-    <div class="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-4 mt-6">
-        <p class="text-xs font-medium text-orange-800 mb-2">Spend <strong>UGX {{ amount_for_free_delivery|floatformat:0 }}</strong> more for FREE delivery!</p>
-        <div class="w-full bg-orange-200 rounded-full h-2">
-            <div class="bg-orange-500 h-2 rounded-full" style="width: {% widthratio subtotal config.free_delivery_threshold 100 %}%"></div>
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sticky bottom-20 md:bottom-6">
-        <div class="space-y-2 mb-4 text-sm">
+    <div class="mt-5 rounded-2xl bg-white p-4 shadow-card ring-1 ring-slate-900/5">
+        <dl class="space-y-2 text-sm">
             <div class="flex justify-between text-slate-500">
-                <span>Subtotal</span>
-                <span>UGX {{ subtotal|floatformat:0 }}</span>
+                <dt>Subtotal</dt>
+                <dd class="tabular-nums">UGX {{ subtotal|floatformat:"0g" }}</dd>
             </div>
             <div class="flex justify-between text-slate-500">
-                <span>Delivery Fee</span>
-                <span>{% if delivery_fee == 0 %}<span class="text-green-600 font-bold">FREE</span>{% else %}UGX {{ delivery_fee|floatformat:0 }}{% endif %}</span>
+                <dt>Delivery fee</dt>
+                <dd class="tabular-nums">{% if delivery_fee == 0 %}<span class="font-bold text-green-600">FREE</span>{% else %}UGX {{ delivery_fee|floatformat:"0g" }}{% endif %}</dd>
             </div>
-            <div class="border-t border-slate-100 pt-2 mt-2 flex justify-between items-center">
-                <span class="font-bold text-slate-800 text-base">Total</span>
-                <span class="text-2xl font-bold text-orange-600">UGX {{ grand_total|floatformat:0 }}</span>
+            <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+                <dt class="text-base font-bold text-slate-800">Total</dt>
+                <dd class="text-2xl font-extrabold tabular-nums text-brand-600">UGX {{ grand_total|floatformat:"0g" }}</dd>
             </div>
-        </div>
-        {% if config.is_open %}
-        <a href="{% url 'checkout' %}"
-           class="flex items-center justify-center w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-sm transition-all active:scale-[0.98] {% if subtotal < config.minimum_order_value %}opacity-50 cursor-not-allowed{% endif %}"
-           {% if subtotal < config.minimum_order_value %}aria-disabled="true" title="Add items to meet the minimum order value"{% endif %}>
-            Proceed to Checkout
-            <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
-        </a>
+        </dl>
+        {% if delivery_fee > 0 and not current_customer.apartment %}
+            <p class="mt-2 text-[11px] text-slate-400">The delivery fee can differ by apartment. You’ll see the final amount at checkout.</p>
+        {% endif %}
+    </div>
+
+    {# Pinned to the bottom on phones, inline on desktop (see .action-bar in styles.css) #}
+    <div class="action-bar">
+        {% if not config.is_open %}
+            <div class="rounded-2xl bg-slate-200 px-5 py-3.5 text-center text-base font-bold text-slate-400">Store is closed</div>
+        {% elif amount_for_minimum > 0 %}
+            <div class="rounded-2xl bg-slate-100 px-5 py-3 text-center">
+                <p class="text-sm font-bold text-slate-600">Add UGX {{ amount_for_minimum|floatformat:"0g" }} more to check out</p>
+                <p class="text-[11px] text-slate-400">Minimum order is UGX {{ config.minimum_order_value|floatformat:"0g" }}</p>
+            </div>
         {% else %}
-        <button disabled class="flex items-center justify-center w-full bg-slate-300 text-slate-500 font-bold py-3.5 rounded-xl cursor-not-allowed">
-            Store is Closed
-        </button>
+            <a href="{% url 'checkout' %}"
+               class="flex w-full items-center justify-between gap-3 rounded-2xl bg-brand-600 px-5 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.98]">
+                <span class="flex items-center gap-2">Go to checkout <i data-lucide="arrow-right" class="h-5 w-5"></i></span>
+                <span class="tabular-nums">UGX {{ grand_total|floatformat:"0g" }}</span>
+            </a>
         {% endif %}
     </div>
 
 {% else %}
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center flex flex-col items-center">
-        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-            <i data-lucide="shopping-cart" class="w-10 h-10 text-slate-300"></i>
+    <div class="flex flex-col items-center rounded-2xl bg-white p-10 text-center shadow-card ring-1 ring-slate-900/5">
+        <div class="mb-4 grid h-20 w-20 place-items-center rounded-full bg-brand-50">
+            <i data-lucide="shopping-cart" class="h-10 w-10 text-brand-500"></i>
         </div>
-        <p class="text-slate-600 font-medium text-lg mb-1">Your cart is empty</p>
-        <p class="text-slate-400 text-sm mb-6">Looks like you haven't added anything yet.</p>
+        <p class="mb-1 text-lg font-bold text-slate-700">Your cart is empty</p>
+        <p class="mb-6 text-sm text-slate-400">Add something from the shop and it will show up here.</p>
         <a href="{% url 'home' %}"
-           class="inline-flex items-center bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold px-6 py-2.5 rounded-xl transition-colors">
-            Browse Products
+           class="inline-flex items-center rounded-xl bg-brand-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-700 active:scale-95">
+            Browse products
         </a>
     </div>
 {% endif %}

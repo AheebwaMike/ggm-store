@@ -1,0 +1,143 @@
+/* GGM Store: custom styles that Tailwind utilities can't express cleanly.
+   base.html links this file with ?v=N. Bump N whenever you edit it,
+   because the service worker caches static files cache-first. */
+
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- Safe areas (notches and home indicators) ---- */
+.pt-safe { padding-top: var(--safe-top); }
+.pb-safe { padding-bottom: var(--safe-bottom); }
+
+/* ---- Horizontal carousels ----
+   Usage: <div class="snap-row no-scrollbar"> <div class="w-40">card</div> ... </div>
+   Bleeds to the screen edge inside the page's 1rem side padding. */
+.snap-row {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin-inline: -1rem;
+    padding: 0.25rem 1rem 0.75rem;
+    scroll-padding-inline: 1rem;
+    -webkit-overflow-scrolling: touch;
+}
+.snap-row > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+}
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* ---- Floating cart bar position ----
+   Phones: sits just above the bottom nav (4rem tall).
+   Desktop: centred near the bottom edge.
+   The #cart-bar prefix beats Tailwind's inset-x-0 utility. */
+#cart-bar.cart-bar-pos {
+    bottom: calc(4rem + var(--safe-bottom) + 0.5rem);
+}
+@media (min-width: 768px) {
+    #cart-bar.cart-bar-pos {
+        bottom: 1rem;
+        left: 50%;
+        right: auto;
+        width: 26rem;
+        padding-inline: 0;
+        transform: translateX(-50%);
+    }
+}
+
+/* ---- Bottom nav: active tab gets a soft filled icon ---- */
+.nav-active svg {
+    fill: #ffedd5;
+}
+
+/* ---- Toast ("Added: Kakira Sugar") ---- */
+#ggm-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(8.25rem + var(--safe-bottom));
+    z-index: 60;
+    max-width: min(92vw, 22rem);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 8px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#ggm-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+@media (min-width: 768px) {
+    #ggm-toast {
+        bottom: 5.5rem;
+    }
+}
+
+/* ---- Add-to-cart confirmation: the button pops when the request succeeds ---- */
+@keyframes ggm-pop {
+    50% { transform: scale(1.22); }
+}
+.pop {
+    animation: ggm-pop 0.28s ease-out;
+}
+
+/* ---- Keyboard focus ---- */
+:focus-visible {
+    outline: 3px solid #fdba74;
+    outline-offset: 2px;
+}
+
+/* ---- Respect reduced-motion settings ---- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ---- Product page action bar ----
+   Phones: pinned to the bottom of the screen with the Add to cart button.
+   Desktop: sits inline under the price. */
+.action-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    background: #fff;
+    border-top: 1px solid rgb(226 232 240 / 0.8);
+    padding: 0.75rem 0.75rem calc(0.75rem + var(--safe-bottom));
+}
+@media (min-width: 768px) {
+    .action-bar {
+        position: static;
+        background: transparent;
+        border-top: 0;
+        padding: 0;
+        margin-top: 1.25rem;
+    }
+}
+
+/* ---- Order success: the tick pops in ---- */
+@keyframes ggm-success-pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    70% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); }
+}
+.success-pop {
+    animation: ggm-success-pop 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}

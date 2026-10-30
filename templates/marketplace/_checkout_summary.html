@@ -1,31 +1,45 @@
-<div class="space-y-3 mb-4">
+{# Swapped into #checkout-summary when the apartment changes. Lives inside the checkout form. #}
+<ul class="divide-y divide-slate-100">
     {% for item in items %}
-    <div class="flex justify-between text-sm">
-        <div class="flex items-start gap-2">
-            <span class="text-slate-600">
-                {{ item.quantity }} × {{ item.product.parent_group|default:item.product.name }}
+    <li class="flex items-center gap-3 py-3">
+        {% include "marketplace/_thumb.html" with product=item.product box="h-12 w-12" %}
+        <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold leading-snug text-slate-800">
+                {{ item.product.parent_group|default:item.product.name }}
                 {% if item.product.variant_label %}
-                    <span class="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded ml-1">{{ item.product.variant_label }}</span>
+                    <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-bold text-slate-600">{{ item.product.variant_label }}</span>
                 {% endif %}
-            </span>
+            </p>
+            <p class="mt-0.5 text-xs text-slate-400">Qty {{ item.quantity }}</p>
         </div>
-        <span class="font-medium text-slate-800 whitespace-nowrap">UGX {{ item.line_total|floatformat:0 }}</span>
-    </div>
+        <span class="shrink-0 text-sm font-bold tabular-nums text-slate-800">UGX {{ item.line_total|floatformat:"0g" }}</span>
+    </li>
     {% endfor %}
-</div>
+</ul>
 
-<div class="border-t border-slate-100 pt-3 space-y-2 text-sm mb-4">
+<dl class="mt-1 space-y-2 border-t border-slate-100 pt-3 text-sm">
     <div class="flex justify-between text-slate-500">
-        <span>Subtotal</span>
-        <span>UGX {{ subtotal|floatformat:0 }}</span>
+        <dt>Subtotal</dt>
+        <dd class="tabular-nums">UGX {{ subtotal|floatformat:"0g" }}</dd>
     </div>
     <div class="flex justify-between text-slate-500">
-        <span>Delivery Fee</span>
-        <span>{% if delivery_fee == 0 %}<span class="text-green-600 font-bold">FREE</span>{% else %}UGX {{ delivery_fee|floatformat:0 }}{% endif %}</span>
+        <dt>Delivery fee</dt>
+        <dd class="tabular-nums">{% if delivery_fee == 0 %}<span class="font-bold text-green-600">FREE</span>{% else %}UGX {{ delivery_fee|floatformat:"0g" }}{% endif %}</dd>
     </div>
-</div>
+    <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+        <dt class="text-base font-bold text-slate-800">Total</dt>
+        <dd class="text-2xl font-extrabold tabular-nums text-brand-600">UGX {{ grand_total|floatformat:"0g" }}</dd>
+    </div>
+</dl>
 
-<div class="border-t border-slate-100 pt-3 flex justify-between items-center">
-    <span class="font-bold text-slate-800">Total</span>
-    <span class="text-2xl font-bold text-orange-600">UGX {{ grand_total|floatformat:0 }}</span>
+{# Pinned to the bottom on phones, inline on desktop (see .action-bar in styles.css). It re-renders with the new total. #}
+<div class="action-bar">
+    <button type="submit" data-place-order
+            class="flex w-full items-center justify-between gap-3 rounded-2xl bg-brand-600 px-5 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.98] disabled:cursor-not-allowed">
+        <span class="flex items-center gap-2">
+            <i data-lucide="check-circle" class="h-5 w-5"></i>
+            <span data-label>Place order</span>
+        </span>
+        <span class="tabular-nums">UGX {{ grand_total|floatformat:"0g" }}</span>
+    </button>
 </div>
