@@ -1,0 +1,15 @@
+{% comment %}
+Small product thumbnail (cart, checkout, orders). Uses the optimized 300x300 image and
+falls back to the basket placeholder (also when the product was removed from the catalogue).
+
+    {% include "marketplace/_thumb.html" with product=item.product box="h-16 w-16" %}
+{% endcomment %}
+<span class="{{ box|default:'h-16 w-16' }} relative block shrink-0 overflow-hidden rounded-xl bg-brand-50 ring-1 ring-slate-900/5">
+    {% if product.image and product.thumbnail_url %}
+        <img src="{{ product.thumbnail_url }}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
+    {% else %}
+        <span class="grid h-full w-full place-items-center text-orange-200">
+            <i data-lucide="shopping-basket" class="h-1/2 w-1/2"></i>
+        </span>
+    {% endif %}
+</span>

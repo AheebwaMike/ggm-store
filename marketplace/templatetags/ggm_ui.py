@@ -44,3 +44,12 @@ def group_emoji(name):
         if any(keyword in text for keyword in keywords):
             return emoji
     return '🛒'
+
+
+_ORDER_RANKS = {'new': 0, 'confirmed': 1, 'packed': 2, 'delivered': 3}
+
+
+@register.filter
+def order_rank(status):
+    """Position of an order status in the tracking steps (0 = placed ... 3 = delivered)."""
+    return _ORDER_RANKS.get(status, 0)
