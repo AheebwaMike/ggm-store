@@ -174,13 +174,14 @@ def cart_bar(request):
     """Floating cart summary (HTMX partial). Empty body when the cart is empty."""
     if not _get_cart(request):
         return HttpResponse('')
-    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(request)
-    if not items:
+    context = _cart_context(request)
+    if not context['items']:
         return HttpResponse('')
     return render(request, 'marketplace/_cart_bar.html', {
-        'item_count': sum(item['quantity'] for item in items),
-        'subtotal': subtotal,
-        'amount_for_free_delivery': amount_for_free_delivery,
+        'item_count': sum(item['quantity'] for item in context['items']),
+        'subtotal': context['subtotal'],
+        'amount_for_free_delivery': context['amount_for_free_delivery'],
+        'amount_for_minimum': context['amount_for_minimum'],
     })
 
 
@@ -343,16 +344,34 @@ def _cart_details(request, apartment_id=None):
     )
 
 
-def cart_view(request):
-    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(request)
-    return render(request, 'marketplace/cart.html', {
+def _saved_apartment_id(request):
+    """Apartment of the customer saved in the session, if any."""
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return None
+    return Customer.objects.filter(pk=customer_id).values_list('apartment_id', flat=True).first()
+
+
+def _cart_context(request):
+    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(
+        request, _saved_apartment_id(request)
+    )
+    amount_for_minimum = (
+        max(config.minimum_order_value - subtotal, Decimal('0.00')) if items else Decimal('0.00')
+    )
+    return {
         'items': items,
         'subtotal': subtotal,
         'delivery_fee': delivery_fee,
         'grand_total': grand_total,
         'amount_for_free_delivery': amount_for_free_delivery,
+        'amount_for_minimum': amount_for_minimum,
         'config': config,
-    })
+    }
+
+
+def cart_view(request):
+    return render(request, 'marketplace/cart.html', _cart_context(request))
 
 
 @require_POST
@@ -376,15 +395,7 @@ def cart_update(request, product_id):
 
     _save_cart(request, cart)
 
-    items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(request)
-    response = render(request, 'marketplace/_cart_body.html', {
-        'items': items,
-        'subtotal': subtotal,
-        'delivery_fee': delivery_fee,
-        'grand_total': grand_total,
-        'amount_for_free_delivery': amount_for_free_delivery,
-        'config': config,
-    })
+    response = render(request, 'marketplace/_cart_body.html', _cart_context(request))
     response['HX-Trigger'] = 'cartUpdated'
     return response
 
@@ -684,7 +695,10 @@ def staff_upload_stock(request):
 
 
 def order_success(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return redirect('home')
+    order = get_object_or_404(Order, id=order_id, customer_id=customer_id)
     return render(request, 'marketplace/order_success.html', {
         'order': order,
         'config': _get_store_config(),
@@ -705,10 +719,17 @@ def customer_orders(request):
         messages.info(request, 'Please place an order to see your order history.')
         return redirect('home')
 
-    orders = Order.objects.filter(customer=customer).order_by('-created_at').prefetch_related('items')
+    orders = list(
+        Order.objects.filter(customer=customer)
+        .order_by('-created_at')
+        .prefetch_related('items__product')
+    )
+    active_statuses = ('new', 'confirmed', 'packed')
     return render(request, 'marketplace/customer_orders.html', {
         'customer': customer,
         'orders': orders,
+        'active_orders': [order for order in orders if order.status in active_statuses],
+        'past_orders': [order for order in orders if order.status not in active_statuses],
     })
 
 
