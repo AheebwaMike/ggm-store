@@ -59,9 +59,15 @@ class Product(models.Model):
 
     @property
     def thumbnail_url(self):
-        if self.image:
-            return self.image.url
-        return None
+        """Small, compressed image for cards, grids and the cart (about 300x300)."""
+        if not self.image:
+            return None
+        storage = self.image.storage
+        if hasattr(storage, 'transformed_url'):
+            return storage.transformed_url(
+                self.image.name, width=300, height=300, crop='pad', background='auto',
+            )
+        return self.image.url
     
     def __str__(self):
         return f"{self.code} - {self.name}"
