@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 
 from marketplace.storage import CloudinaryMediaStorage
 
@@ -63,6 +64,23 @@ class Product(models.Model):
 
 class Apartment(models.Model):
     name = models.CharField(max_length=255, unique=True) # e.g., "Block B"
+    slug = models.SlugField(
+        max_length=60,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="Used in this apartment's QR link (/a/<slug>/). Created automatically. "
+                  "Do not change it once QR codes are printed.",
+    )
+    is_served = models.BooleanField(
+        default=True,
+        help_text="Untick if you do not deliver here yet. Scans of its QR code are still counted.",
+    )
+    welcome_message = models.CharField(
+        max_length=160,
+        blank=True,
+        help_text="Optional line shown to people who arrive by this apartment's QR code.",
+    )
     delivery_fee_override = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -70,9 +88,36 @@ class Apartment(models.Model):
         blank=True,
         help_text="Leave blank to use the global delivery fee. Set to 0 for free delivery.",
     )
-    
+
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = self._make_unique_slug()
+        super().save(*args, **kwargs)
+
+    def _make_unique_slug(self):
+        base = slugify(self.name)[:50] or 'apartment'
+        slug, number = base, 2
+        while Apartment.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            slug = f'{base}-{number}'
+            number += 1
+        return slug
+
+
+class QRScan(models.Model):
+    """One scan of an apartment's QR code (the same phone at the same code counts once per 30 min)."""
+    apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE, related_name='scans')
+    source = models.CharField(max_length=40, blank=True, help_text="Placement tag, e.g. gate or corridor")
+    visitor = models.CharField(max_length=32, blank=True, db_index=True)
+    scanned_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-scanned_at']
+
+    def __str__(self):
+        return f"{self.apartment} scan at {self.scanned_at:%Y-%m-%d %H:%M}"
 
 
 class StoreConfig(models.Model):
