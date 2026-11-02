@@ -1,4 +1,7 @@
-const CACHE_NAME = 'ggm-store-v1';
+// Bump this number on every release that changes cached assets (CSS, JS, icons).
+// The activate step below deletes every cache that doesn't match, so returning
+// users get the new files instead of the old ones.
+const CACHE_NAME = 'ggm-store-v3';
 const PRECACHE_URLS = [
   '/',
   '/static/manifest.json',
@@ -29,17 +32,24 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Never cache or serve these from the cache: they show live, per-customer state.
+  // '/cart' also covers /cart/count/ and /cart/bar/.
   const excludedPaths = [
     '/staff',
     '/cart',
     '/admin',
     '/checkout',
     '/order',
+    '/orders',
+    '/my-orders',
     '/login',
     '/logout',
+    '/a/',          // apartment QR links must always reach the server so scans are counted
   ];
   if (excludedPaths.some((path) => url.pathname.startsWith(path))) return;
 
+  // Static files: cache-first. The full URL (including ?v=N) is the cache key,
+  // so changing the ?v= number in base.html always fetches a fresh copy.
   if (url.pathname.startsWith('/static/')) {
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request).then((response) => {
@@ -53,6 +63,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Everything else: network-first, falling back to the cache when offline.
   event.respondWith(
     fetch(request)
       .then((response) => {

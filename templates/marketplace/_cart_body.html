@@ -80,7 +80,7 @@
                 <dd class="text-2xl font-extrabold tabular-nums text-brand-600">UGX {{ grand_total|floatformat:"0g" }}</dd>
             </div>
         </dl>
-        {% if delivery_fee > 0 and not current_customer.apartment %}
+        {% if delivery_fee > 0 and not current_apartment %}
             <p class="mt-2 text-[11px] text-slate-400">The delivery fee can differ by apartment. You’ll see the final amount at checkout.</p>
         {% endif %}
     </div>
