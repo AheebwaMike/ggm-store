@@ -1,3 +1,7 @@
+"""
+Marketplace models for products, orders, customers, and related entities.
+"""
+
 from django.db import models
 from django.utils.text import slugify
 
