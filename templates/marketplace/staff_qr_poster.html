@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QR poster - {{ apartment.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @page { size: A4 portrait; margin: 0; }
+        .qr svg { display: block; width: 100%; height: auto; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+            .poster { box-shadow: none !important; margin: 0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-200 p-4 text-slate-900">
+
+    <div class="no-print mx-auto mb-4 flex max-w-[210mm] flex-wrap items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-bold">QR poster: {{ apartment.name }}{% if tag %} <span class="text-slate-500">({{ tag }})</span>{% endif %}</h1>
+            <p class="text-sm text-slate-600">Print on A4. Scan the printed copy with two phones before you print many.</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="window.print()" class="rounded-xl bg-orange-600 px-5 py-2 font-bold text-white shadow hover:bg-orange-700">Print poster</button>
+            <button onclick="window.close()" class="rounded-xl bg-white px-4 py-2 font-bold text-slate-800 shadow">Close</button>
+        </div>
+    </div>
+
+    <main class="poster mx-auto flex h-[297mm] w-[210mm] flex-col overflow-hidden bg-white shadow-xl">
+
+        <header class="bg-orange-600 px-[14mm] py-[10mm] text-white">
+            <p class="text-[5mm] font-bold uppercase tracking-widest text-orange-100">GGM Store</p>
+            <h2 class="mt-[2mm] text-[13mm] font-black leading-[1.05]">Groceries to your door</h2>
+            <p class="mt-[3mm] text-[6mm] font-semibold text-orange-50">For residents of {{ apartment.name }}</p>
+        </header>
+
+        <section class="flex flex-1 flex-col items-center justify-center px-[14mm]">
+            <p class="mb-[5mm] text-[7mm] font-extrabold">Scan with your phone camera</p>
+            <div class="rounded-[5mm] border-[1.2mm] border-slate-900 bg-white p-[3mm]">
+                <div class="qr w-[110mm]">{{ qr_svg|safe }}</div>
+            </div>
+            <p class="mt-[5mm] text-[4.5mm] text-slate-600">No app to install. It opens right in your browser.</p>
+        </section>
+
+        <section class="px-[14mm] pb-[6mm]">
+            <ol class="grid grid-cols-3 gap-[4mm] text-center">
+                <li class="rounded-[3mm] bg-slate-100 px-[3mm] py-[4mm]">
+                    <p class="text-[8mm] font-black text-orange-600">1</p>
+                    <p class="text-[4.2mm] font-bold">Scan the code</p>
+                </li>
+                <li class="rounded-[3mm] bg-slate-100 px-[3mm] py-[4mm]">
+                    <p class="text-[8mm] font-black text-orange-600">2</p>
+                    <p class="text-[4.2mm] font-bold">Choose what you need</p>
+                </li>
+                <li class="rounded-[3mm] bg-slate-100 px-[3mm] py-[4mm]">
+                    <p class="text-[8mm] font-black text-orange-600">3</p>
+                    <p class="text-[4.2mm] font-bold">We bring it to your door</p>
+                </li>
+            </ol>
+
+            <p class="mt-[5mm] text-center text-[4.5mm] font-semibold text-slate-700">
+                Pay cash or MoMo on delivery{% if config.free_delivery_threshold > 0 %}. Free delivery on orders over UGX {{ config.free_delivery_threshold|floatformat:"0g" }}{% endif %}.
+            </p>
+        </section>
+
+        <footer class="border-t-[0.6mm] border-slate-300 bg-slate-50 px-[14mm] py-[6mm] text-center">
+            <p class="text-[4mm] text-slate-500">Cannot scan? Type this address into your browser:</p>
+            <p class="mt-[1mm] break-all font-mono text-[6mm] font-extrabold text-slate-900">{{ readable_url }}</p>
+            {% if config.whatsapp_number %}
+            <p class="mt-[2mm] text-[4.2mm] font-semibold text-slate-600">Questions? WhatsApp +{{ config.whatsapp_number|cut:"+"|cut:" " }}</p>
+            {% endif %}
+        </footer>
+    </main>
+</body>
+</html>

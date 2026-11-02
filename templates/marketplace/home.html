@@ -41,7 +41,14 @@
 
 {% if messages %}
     {% for message in messages %}
+        {% if 'welcome' in message.tags %}
+        <div class="mb-4 flex items-center gap-3 rounded-2xl bg-brand-50 p-3.5 ring-1 ring-brand-200/70">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-600 text-white"><i data-lucide="map-pin" class="h-4 w-4"></i></span>
+            <p class="text-sm font-semibold text-brand-800">{{ message }}</p>
+        </div>
+        {% else %}
         <div class="mb-4 rounded-xl bg-blue-50 p-3 text-sm font-medium text-blue-700">{{ message }}</div>
+        {% endif %}
     {% endfor %}
 {% endif %}
 

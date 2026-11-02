@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}{{ apartment.name }} - GGM Store{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-md pt-4 text-center">
+    <div class="mx-auto mb-4 grid h-20 w-20 place-items-center rounded-full bg-brand-50">
+        <i data-lucide="map-pin-off" class="h-10 w-10 text-brand-500"></i>
+    </div>
+    <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">We do not deliver to {{ apartment.name }} yet</h1>
+    <p class="mt-2 text-slate-600">
+        We are growing street by street. Your scan tells us that people here want delivery, and that helps us decide where to go next.
+    </p>
+
+    <div class="mt-6 space-y-3">
+        {% if config.whatsapp_number %}
+        <a href="https://wa.me/{{ config.whatsapp_number }}?text={{ whatsapp_message|urlencode }}"
+           target="_blank" rel="noopener noreferrer"
+           class="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 font-bold text-white shadow-sm transition active:scale-[0.98]">
+            <i data-lucide="message-circle" class="h-5 w-5"></i> Tell us you want delivery
+        </a>
+        {% endif %}
+        <a href="{% url 'home' %}"
+           class="flex w-full items-center justify-center rounded-2xl bg-white py-3.5 font-bold text-slate-700 ring-1 ring-slate-200 transition active:scale-[0.98]">
+            Browse the shop
+        </a>
+    </div>
+</div>
+{% endblock %}

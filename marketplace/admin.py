@@ -1,5 +1,6 @@
 # marketplace/admin.py
 from django.contrib import admin
+from django.urls import reverse
 from django.utils.html import format_html
 from .models import (
     Apartment,
@@ -10,6 +11,7 @@ from .models import (
     Product,
     ProductGroup,
     PushSubscription,
+    QRScan,
     StoreConfig,
     Unit,
     WhatsAppNotificationLog,
@@ -55,8 +57,31 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Apartment)
 class ApartmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'delivery_fee_override')
-    search_fields = ('name',)
+    list_display = ('name', 'slug', 'is_served', 'delivery_fee_override', 'qr_poster')
+    list_filter = ('is_served',)
+    search_fields = ('name', 'slug')
+    fields = ('name', 'slug', 'is_served', 'welcome_message', 'delivery_fee_override')
+
+    def get_readonly_fields(self, request, obj=None):
+        # Once a slug exists it is printed on QR codes, so protect it from accidental edits.
+        return ('slug',) if obj and obj.slug else ()
+
+    @admin.display(description='QR')
+    def qr_poster(self, obj):
+        if not obj.pk:
+            return ''
+        return format_html('<a href="{}" target="_blank">Poster</a>', reverse('staff_qr_poster', args=[obj.pk]))
+
+
+@admin.register(QRScan)
+class QRScanAdmin(admin.ModelAdmin):
+    list_display = ('apartment', 'source', 'scanned_at')
+    list_filter = ('apartment', 'source')
+    date_hierarchy = 'scanned_at'
+    readonly_fields = ('apartment', 'source', 'visitor', 'scanned_at')
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(StoreConfig)

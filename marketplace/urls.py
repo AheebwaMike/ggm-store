@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import qr_views, views
 
 urlpatterns = [
     path('sw.js', views.service_worker, name='service_worker'),
@@ -8,6 +8,7 @@ urlpatterns = [
     path('group/<int:group_id>/', views.product_list, name='product_list'),
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),
     path('product/<int:product_id>/variant/', views.product_variant_partial, name='product_variant_partial'),
+    path('a/<slug:slug>/', qr_views.apartment_landing, name='apartment_landing'),
     path('cart/', views.cart_view, name='cart_view'),
     path('cart/count/', views.cart_count, name='cart_count'),
     path('cart/bar/', views.cart_bar, name='cart_bar'),
@@ -32,5 +33,8 @@ urlpatterns = [
     path('staff/manifest/', views.staff_manifest, name='staff_manifest'),
     path('staff/settings/', views.staff_settings, name='staff_settings'),
     path('staff/settings/upload-stock/', views.staff_upload_stock, name='staff_upload_stock'),
+    path('staff/qr/', qr_views.staff_qr_list, name='staff_qr_list'),
+    path('staff/qr/<int:apartment_id>/poster/', qr_views.staff_qr_poster, name='staff_qr_poster'),
+    path('staff/qr/<int:apartment_id>/download/<str:fmt>/', qr_views.staff_qr_download, name='staff_qr_download'),
     path('owner/', views.owner_dashboard, name='owner_dashboard'),
 ]
