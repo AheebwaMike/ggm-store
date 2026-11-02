@@ -144,7 +144,7 @@ MAILERS = {
     },
 }
 
-SITE_BASE_URL = os.getenv('SITE_BASE_URL', 'https://ggm-store.onrender.com')
+SITE_BASE_URL = os.getenv('SITE_BASE_URL', 'https://ggm-store.onrender.com') # site base url
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'staff_orders'
 LOGOUT_REDIRECT_URL = 'login'

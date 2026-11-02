@@ -1,3 +1,7 @@
+"""
+Views for the GGM Store marketplace app.
+"""
+
 import json
 import logging
 import re

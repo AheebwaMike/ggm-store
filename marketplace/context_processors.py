@@ -1,3 +1,7 @@
+"""
+Context processors for the marketplace app.
+"""
+
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
 
