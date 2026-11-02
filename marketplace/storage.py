@@ -72,6 +72,27 @@ class CloudinaryMediaStorage(Storage):
         )
         return url
 
+    def transformed_url(self, name, **options):
+        """URL of a resized, compressed copy served by Cloudinary's CDN.
+
+        options are Cloudinary transformation options (width, height, crop, ...).
+        quality='auto' and fetch_format='auto' make Cloudinary pick the smallest good
+        file for the visitor's browser (for example WebP). Falls back to the plain
+        URL when Cloudinary is not configured (local development).
+        """
+        if self._fallback_storage is not None or not name or ':' not in name:
+            return self.url(name)
+        resource_type, public_id = name.split(':', 1)
+        url, _ = cloudinary.utils.cloudinary_url(
+            public_id,
+            resource_type=resource_type,
+            secure=True,
+            quality='auto',
+            fetch_format='auto',
+            **options,
+        )
+        return url
+
     def delete(self, name):
         if self._fallback_storage is not None:
             return self._fallback_storage.delete(name)
