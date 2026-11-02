@@ -325,7 +325,7 @@ def _cart_details(request, apartment_id=None):
     apartment = None
     if apartment_id:
         try:
-            apartment = Apartment.objects.filter(pk=apartment_id).first()
+            apartment = Apartment.objects.get(pk=apartment_id, is_served=True)
         except (ValueError, TypeError):
             apartment = None
     delivery_fee = _calculate_delivery_fee(subtotal, apartment, config)
@@ -345,8 +345,12 @@ def _cart_details(request, apartment_id=None):
 
 
 def _saved_apartment_id(request):
-    """Apartment of the customer saved in the session, if any."""
+    """Apartment to price delivery for: a scanned QR code wins, then the saved customer's apartment."""
+    scanned_id = request.session.get('qr_apartment_id')
+    if scanned_id and Apartment.objects.filter(pk=scanned_id, is_served=True).exists():
+        return scanned_id
     customer_id = request.session.get('customer_id')
+
     if not customer_id:
         return None
     return Customer.objects.filter(pk=customer_id).values_list('apartment_id', flat=True).first()
@@ -417,7 +421,7 @@ def checkout(request):
         )
         return redirect('cart_view')
 
-    apartments = Apartment.objects.all().order_by('name')
+    apartments = Apartment.objects.filter(is_served=True).order_by('name')
     saved_customer = None
     customer_id = request.session.get('customer_id')
     if customer_id:
@@ -441,7 +445,7 @@ def checkout(request):
             messages.error(request, 'Please select your apartment.')
         else:
             try:
-                apartment = Apartment.objects.get(pk=apartment_id)
+                apartment = Apartment.objects.get(pk=apartment_id, is_served=True)
             except (Apartment.DoesNotExist, ValueError, TypeError):
                 messages.error(request, 'Please select a valid apartment.')
         if payment_method not in {'cash', 'momo'}:
@@ -499,11 +503,14 @@ def checkout(request):
             'apartment': str(saved_customer.apartment.id) if saved_customer.apartment else '',
             'unit_number': saved_customer.unit_number,
         }
-        if saved_customer.apartment:
-            apartment_id = str(saved_customer.apartment_id)
+        
+        # A scanned QR code wins over the saved customer's apartment; otherwise use the saved one.
+        preferred_apartment_id = _saved_apartment_id(request)
+        if preferred_apartment_id:
+            form_data['apartment'] = str(preferred_apartment_id)
             items, subtotal, delivery_fee, grand_total, amount_for_free_delivery, config = _cart_details(
                 request,
-                apartment_id,
+                str(preferred_apartment_id),
             )
 
     return render(request, 'marketplace/checkout.html', {
