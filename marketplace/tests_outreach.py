@@ -4,11 +4,18 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from .dashboard_stats import clean_range, delivery_time_stats, outreach_stats, window
 from .models import Apartment, Customer, Order, QRScan
+
+# Pages that extend base.html use {% static %}. Under production-style settings (manifest static storage)
+# that fails in tests because collectstatic has not run, so the page tests use plain static storage.
+PLAIN_STATIC = override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
 
 
 def make_order(customer, status='new', total='10000', created=None, **extra):
@@ -158,6 +165,7 @@ class OutreachStatsTests(TestCase):
         self.assertFalse(outreach_stats(self.today, self.today)['has_data'])
 
 
+@PLAIN_STATIC
 class DashboardPageTests(TestCase):
     def setUp(self):
         self.staff = get_user_model().objects.create_user('boss', password='pw', is_staff=True)

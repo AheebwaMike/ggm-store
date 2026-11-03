@@ -11,6 +11,13 @@ from .models import Apartment, QRScan
 
 PHONE_UA = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36'
 
+# Pages that extend base.html use {% static %}. Under production-style settings (manifest static storage)
+# that fails in tests because collectstatic has not run, so the page tests use plain static storage.
+PLAIN_STATIC = override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+
 
 class ApartmentSlugTests(TestCase):
     def test_slug_is_created_from_name_and_is_unique(self):
@@ -26,6 +33,7 @@ class ApartmentSlugTests(TestCase):
         self.assertEqual(Apartment.objects.get(pk=apartment.pk).slug, 'block-b')
 
 
+@PLAIN_STATIC
 class LandingTests(TestCase):
     def setUp(self):
         self.apartment = Apartment.objects.create(name='Sunrise Apartments', welcome_message='')
@@ -91,6 +99,7 @@ class LandingTests(TestCase):
         self.assertNotContains(response, 'Deliver to')   # the customer header is hidden in the staff area
 
 
+@PLAIN_STATIC
 class StaffToolTests(TestCase):
     def setUp(self):
         self.apartment = Apartment.objects.create(name='Sunrise Apartments')
@@ -100,6 +109,7 @@ class StaffToolTests(TestCase):
         for path in ('/staff/qr/', f'/staff/qr/{self.apartment.pk}/poster/', f'/staff/qr/{self.apartment.pk}/download/png/'):
             self.assertEqual(self.client.get(path).status_code, 302)
 
+    @override_settings(SITE_BASE_URL='')   # the warning only shows while the address is not configured
     def test_list_page_renders_and_assigns_missing_slugs(self):
         Apartment.objects.filter(pk=self.apartment.pk).update(slug=None)
         self.client.force_login(self.staff)
