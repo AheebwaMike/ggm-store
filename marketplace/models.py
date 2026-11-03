@@ -4,6 +4,7 @@ Marketplace models for products, orders, customers, and related entities.
 
 from django.db import models
 from django.utils.text import slugify
+from django.utils import timezone
 
 from marketplace.storage import CloudinaryMediaStorage
 
@@ -227,9 +228,40 @@ class Order(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # When each stage was reached (filled in automatically by save(); blank on older orders)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    packed_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    # Which apartment QR code the customer's visit started from, if any
+    qr_apartment = models.ForeignKey(
+        'Apartment',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='qr_orders',
+    )
+    qr_source = models.CharField(max_length=40, blank=True, help_text="Placement tag of that QR code, e.g. gate")
     
     class Meta:
         ordering = ['-created_at']
+
+    _STAGE_FIELDS = {
+        'confirmed': 'confirmed_at',
+        'packed': 'packed_at',
+        'delivered': 'delivered_at',
+    }
+
+    def save(self, *args, **kwargs):
+        # Record the first time an order reaches a stage, whoever changed it (staff page or admin).
+        field = self._STAGE_FIELDS.get(self.status)
+        if field and getattr(self, field) is None:
+            setattr(self, field, timezone.now())
+            update_fields = kwargs.get('update_fields')
+            if update_fields is not None:
+                kwargs['update_fields'] = list(update_fields) + [field]
+        super().save(*args, **kwargs)
 
     @property
     def subtotal(self):

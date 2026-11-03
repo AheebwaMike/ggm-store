@@ -41,6 +41,7 @@ from .models import (
     StoreConfig,
     WhatsAppNotificationLog,
 )
+from .dashboard_stats import RANGE_CHOICES, clean_range, delivery_time_stats, outreach_stats, window
 
 logger = logging.getLogger(__name__)
 
@@ -478,6 +479,11 @@ def checkout(request):
                 },
             )
             request.session['customer_id'] = customer.id
+            
+            # Remember which apartment QR code (if any) this visit started from
+            qr_apartment_id = Apartment.objects.filter(
+                pk=request.session.get('qr_apartment_id'),
+            ).values_list('pk', flat=True).first()
             order = Order.objects.create(
                 customer=customer,
                 status='new',
@@ -485,7 +491,10 @@ def checkout(request):
                 total_amount=grand_total,
                 delivery_fee=delivery_fee,
                 note=note,
+                qr_apartment_id=qr_apartment_id,
+                qr_source=request.session.get('qr_source', '') if qr_apartment_id else '',
             )
+
             for item in items:
                 OrderItem.objects.create(
                     order=order,
@@ -1204,6 +1213,12 @@ def owner_dashboard(request):
         default=0,
     ) or 1
 
+    # Outreach (QR codes) and real delivery times, over the last N days ending on the selected date
+    outreach_days = clean_range(request.GET.get('qr_days'))
+    window_start, window_end = window(selected_date, outreach_days)
+    outreach = outreach_stats(window_start, window_end)
+    delivery_times = delivery_time_stats(window_start, window_end)
+
     recent_orders = day_orders.select_related(
         'customer',
     ).order_by('-created_at')[:10]
@@ -1228,6 +1243,10 @@ def owner_dashboard(request):
         'recent_orders': recent_orders,
         'seven_day_trend': seven_day_trend,
         'max_trend_revenue': max_trend_revenue,
+        'outreach': outreach,
+        'outreach_days': outreach_days,
+        'outreach_ranges': RANGE_CHOICES,
+        'delivery_times': delivery_times,
     })
 
 
