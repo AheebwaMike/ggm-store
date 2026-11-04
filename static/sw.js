@@ -1,7 +1,7 @@
 // Bump this number on every release that changes cached assets (CSS, JS, icons).
 // The activate step below deletes every cache that doesn't match, so returning
 // users get the new files instead of the old ones.
-const CACHE_NAME = 'ggm-store-v3';
+const CACHE_NAME = 'ggm-store-v4';
 const PRECACHE_URLS = [
   '/',
   '/static/manifest.json',

@@ -10,39 +10,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Tailwind + design tokens (brand = the existing orange, so old orange-* classes still match) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#fff7ed',
-                            100: '#ffedd5',
-                            200: '#fed7aa',
-                            500: '#f97316',
-                            600: '#ea580c',
-                            700: '#c2410c',
-                            800: '#9a3412',
-                        },
-                        canvas: '#f4f5f7',
-                    },
-                    boxShadow: {
-                        card: '0 1px 2px rgba(15,23,42,.05), 0 6px 16px -8px rgba(15,23,42,.14)',
-                        bar: '0 10px 30px -8px rgba(15,23,42,.45)',
-                        header: '0 8px 24px -12px rgba(194,65,12,.6)',
-                    },
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind: compiled during deployment (scripts/build_css.sh); design tokens live in tailwind.config.js -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
 
     <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="{% static 'vendor/htmx-1.9.12.min.js' %}"></script>
     <script>
         document.addEventListener('htmx:configRequest', function(evt) {
             const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -61,11 +33,10 @@
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
     <link rel="icon" href="/static/icons/favicon.ico" type="image/x-icon">
 
-    <!-- Bump ?v= whenever styles.css changes (the service worker caches static files cache-first) -->
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=5">
 
-    <!-- Lucide Icons (pin to an exact version once you have checked the one you want) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Lucide icons, pinned and served from our own static files -->
+    <script src="{% static 'vendor/lucide-1.67.0.min.js' %}"></script>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-canvas text-slate-800 font-sans min-h-screen flex flex-col antialiased">
