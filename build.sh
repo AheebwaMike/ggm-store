@@ -8,6 +8,9 @@ pip install uv
 echo "Installing dependencies..."
 uv sync
 
+echo "Building CSS..."
+bash scripts/build_css.sh
+
 echo "Collecting static files..."
 uv run python manage.py collectstatic --no-input
 

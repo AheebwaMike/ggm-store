@@ -22,3 +22,7 @@ INSTRUCTIONS.txt
 
 # product images
 product_images/
+
+# Tailwind CSS build artifacts
+static/css/tailwind.css
+tools/
