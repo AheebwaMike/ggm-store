@@ -18,6 +18,7 @@ staticfiles/
 .vscode/
 
 commit.txt
+INSTRUCTIONS.txt
 
 # product images
 product_images/
