@@ -53,3 +53,12 @@ _ORDER_RANKS = {'new': 0, 'confirmed': 1, 'packed': 2, 'delivered': 3}
 def order_rank(status):
     """Position of an order status in the tracking steps (0 = placed ... 3 = delivered)."""
     return _ORDER_RANKS.get(status, 0)
+
+
+@register.filter
+def get_item(mapping, key):
+    """Look a value up in a dict by key (the cart uses text keys). Returns 0 when it is not there."""
+    try:
+        return mapping.get(str(key), 0)
+    except AttributeError:
+        return 0

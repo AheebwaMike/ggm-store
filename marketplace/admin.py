@@ -1,7 +1,9 @@
 # marketplace/admin.py
 from django.contrib import admin
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.html import format_html
+from .shelves import MIN_SHELF_ITEMS, get_config, shelf_items
 from .models import (
     Apartment,
     Customer,
@@ -12,6 +14,8 @@ from .models import (
     ProductGroup,
     PushSubscription,
     QRScan,
+    Shelf,
+    ShelfItem,
     StoreConfig,
     Unit,
     WhatsAppNotificationLog,
@@ -19,13 +23,31 @@ from .models import (
 
 @admin.register(ProductGroup)
 class ProductGroupAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ('name', 'home_order')
+    list_editable = ('home_order',)
     search_fields = ('name',)
+    ordering = ('name',)
+
 
 @admin.register(Unit)
 class UnitAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
+
+class HasPhotoFilter(admin.SimpleListFilter):
+    title = 'photo'
+    parameter_name = 'has_photo'
+
+    def lookups(self, request, model_admin):
+        return (('yes', 'Has a photo'), ('no', 'No photo yet'))
+
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.exclude(image='').exclude(image__isnull=True)
+        if self.value() == 'no':
+            return queryset.filter(Q(image='') | Q(image__isnull=True))
+        return queryset
+
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -43,7 +65,7 @@ class ProductAdmin(admin.ModelAdmin):
         'image_preview',
     )
     list_editable = ('parent_group', 'variant_label')
-    list_filter = ('is_active', 'group', 'unit', 'parent_group', 'low_stock_threshold')
+    list_filter = (HasPhotoFilter, 'is_active', 'group', 'unit', 'parent_group', 'low_stock_threshold')
     search_fields = ('code', 'name', 'parent_group')
     readonly_fields = ('image_preview',)
 
@@ -127,3 +149,36 @@ class FeaturedCampaignAdmin(admin.ModelAdmin):
     list_display = ('name', 'starts_at', 'ends_at', 'is_active')
     list_filter = ('is_active', 'starts_at', 'ends_at')
     filter_horizontal = ('products',)
+
+
+class ShelfItemInline(admin.TabularInline):
+    model = ShelfItem
+    extra = 3
+    autocomplete_fields = ('product',)
+    fields = ('product', 'position')
+
+
+@admin.register(Shelf)
+class ShelfAdmin(admin.ModelAdmin):
+    list_display = ('title', 'kind', 'position', 'is_active', 'on_home_page')
+    list_editable = ('position', 'is_active')
+    list_filter = ('kind', 'is_active')
+    inlines = [ShelfItemInline]
+    fieldsets = (
+        (None, {'fields': ('title', 'kind', 'position', 'max_items', 'is_active')}),
+        ('Only for some kinds', {
+            'fields': ('group', 'max_price'),
+            'description': "Pick a category for 'Best sellers from one product category'. "
+                           "Enter a price for 'Products under a price'. "
+                           "For hand-picked shelves, add the products in the table below.",
+        }),
+    )
+
+    @admin.display(description='On the home page now?')
+    def on_home_page(self, obj):
+        if not obj.is_active:
+            return 'Hidden (switched off)'
+        count = len(shelf_items(obj, get_config()))
+        if count >= MIN_SHELF_ITEMS:
+            return f'Yes, {count} products'
+        return f'No, only {count} usable products (needs {MIN_SHELF_ITEMS})'

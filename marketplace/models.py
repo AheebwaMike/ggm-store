@@ -10,6 +10,12 @@ from marketplace.storage import CloudinaryMediaStorage
 
 class ProductGroup(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    home_order = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Give a number (1 = first) to show this category in the row at the top of the home page. "
+                  "Leave blank to keep it off that row.",
+    )
     
     def __str__(self):
         return self.name
@@ -57,6 +63,8 @@ class Product(models.Model):
         blank=True,
         storage=CloudinaryMediaStorage(),
     )
+    created_at = models.DateTimeField(auto_now_add=True, null=True, editable=False)
+
 
     @property
     def thumbnail_url(self):
@@ -72,6 +80,60 @@ class Product(models.Model):
     
     def __str__(self):
         return f"{self.code} - {self.name}"
+
+
+class Shelf(models.Model):
+    """A row of products on the home page."""
+    CURATED = 'curated'
+    CATEGORY = 'category'
+    NEW = 'new'
+    UNDER_PRICE = 'under_price'
+    POPULAR = 'popular'
+    KIND_CHOICES = [
+        (CURATED, 'Hand-picked products (you choose them below)'),
+        (CATEGORY, 'Best sellers from one product category'),
+        (NEW, 'New arrivals (added in the last 14 days)'),
+        (UNDER_PRICE, 'Products under a price'),
+        (POPULAR, 'Popular right now (sold in the last 14 days)'),
+    ]
+
+    title = models.CharField(max_length=80)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default=CURATED)
+    group = models.ForeignKey(
+        ProductGroup, on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="Only for 'Best sellers from one product category'",
+    )
+    max_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Only for 'Products under a price'",
+    )
+    max_items = models.PositiveSmallIntegerField(default=12, help_text="How many products to show in the row")
+    position = models.PositiveSmallIntegerField(default=100, help_text="Smaller numbers appear higher on the home page")
+    is_active = models.BooleanField(default=True, help_text="Untick to hide this shelf")
+
+    class Meta:
+        ordering = ['position', 'id']
+        verbose_name_plural = 'Shelves'
+
+    def __str__(self):
+        return self.title
+
+
+class ShelfItem(models.Model):
+    """A product on a hand-picked shelf, in the order you want."""
+    shelf = models.ForeignKey(Shelf, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    position = models.PositiveSmallIntegerField(default=100)
+
+    class Meta:
+        ordering = ['position', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['shelf', 'product'], name='unique_product_per_shelf'),
+        ]
+
+    def __str__(self):
+        return f'{self.shelf} / {self.product}'
+    
 
 class Apartment(models.Model):
     name = models.CharField(max_length=255, unique=True) # e.g., "Block B"
@@ -164,6 +226,12 @@ class StoreConfig(models.Model):
         blank=True,
         help_text="Store WhatsApp number (e.g., 256770000000) without '+' or spaces",
     )
+    shelves_require_photo = models.BooleanField(
+        default=True,
+        help_text="Home page shelves only show products that have a photo. "
+                  "Untick while you are still photographing products.",
+    )
+    shelves_seeded = models.BooleanField(default=False, editable=False)
 
     class Meta:
         verbose_name = "Store Configuration"

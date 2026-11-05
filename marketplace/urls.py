@@ -1,10 +1,13 @@
 from django.urls import path
-from . import qr_views, views
+from . import home_views, qr_views, views
 
 urlpatterns = [
     path('sw.js', views.service_worker, name='service_worker'),
     path('push/subscribe/', views.save_push_subscription, name='save_push_subscription'),
-    path('', views.home, name='home'),
+    path('', home_views.home, name='home'),
+    path('categories/', home_views.all_categories, name='all_categories'),
+    path('shelf/<int:shelf_id>/', home_views.shelf_detail, name='shelf_detail'),
+    path('discover/', home_views.discover, name='discover'),
     path('group/<int:group_id>/', views.product_list, name='product_list'),
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),
     path('product/<int:product_id>/variant/', views.product_variant_partial, name='product_variant_partial'),
@@ -13,6 +16,7 @@ urlpatterns = [
     path('cart/count/', views.cart_count, name='cart_count'),
     path('cart/bar/', views.cart_bar, name='cart_bar'),
     path('cart/add/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
+    path('cart/card/<int:product_id>/', home_views.card_qty, name='card_qty'),
     path('cart/update/<int:product_id>/', views.cart_update, name='cart_update'),
     path('checkout/', views.checkout, name='checkout'),
     path('checkout/summary/', views.checkout_summary_partial, name='checkout_summary_partial'),
@@ -33,6 +37,7 @@ urlpatterns = [
     path('staff/manifest/', views.staff_manifest, name='staff_manifest'),
     path('staff/settings/', views.staff_settings, name='staff_settings'),
     path('staff/settings/upload-stock/', views.staff_upload_stock, name='staff_upload_stock'),
+    path('staff/photos/', home_views.staff_photo_todo, name='staff_photo_todo'),
     path('staff/qr/', qr_views.staff_qr_list, name='staff_qr_list'),
     path('staff/qr/<int:apartment_id>/poster/', qr_views.staff_qr_poster, name='staff_qr_poster'),
     path('staff/qr/<int:apartment_id>/download/<str:fmt>/', qr_views.staff_qr_download, name='staff_qr_download'),

@@ -40,6 +40,19 @@ def _load_current_apartment(request):
     return customer.apartment if customer else None
 
 
+def _cart_quantities(request):
+    """{ 'product id': quantity } for the cart in the session, so cards can show a stepper."""
+    session = getattr(request, 'session', None)
+    cart = session.get('cart', {}) if session is not None else {}
+    quantities = {}
+    for key, quantity in cart.items():
+        try:
+            quantities[str(key)] = int(quantity)
+        except (TypeError, ValueError):
+            continue
+    return quantities
+
+
 def store_context(request):
     return {
         'config': SimpleLazyObject(_load_config),
@@ -47,4 +60,6 @@ def store_context(request):
         'current_apartment': SimpleLazyObject(lambda: _load_current_apartment(request)),
         # Staff and owner pages should not show the customer header or the floating cart bar.
         'in_staff_area': request.path.startswith(('/staff', '/owner')),
+        'cart_quantities': SimpleLazyObject(lambda: _cart_quantities(request)),
+
     }
