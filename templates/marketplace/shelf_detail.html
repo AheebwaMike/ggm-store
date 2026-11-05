@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}{{ shelf.title }} - GGM Store{% endblock %}
+
+{% block mobile_header %}
+    {% url 'home' as home_url %}
+    {% include "marketplace/_app_bar.html" with title=shelf.title back_url=home_url show_search=True %}
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'home' %}" class="mb-4 hidden items-center gap-1 text-sm font-semibold text-slate-500 transition-colors hover:text-brand-600 md:inline-flex">
+    <i data-lucide="arrow-left" class="h-4 w-4"></i> Home
+</a>
+
+<div class="mb-4 flex items-end justify-between gap-3">
+    <h1 class="sr-only text-2xl font-extrabold tracking-tight text-slate-800 md:not-sr-only">{{ shelf.title }}</h1>
+    <p class="text-sm text-slate-500">{{ items|length }} item{{ items|length|pluralize }}</p>
+</div>
+
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+    {% for item in items %}
+        {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product %}
+    {% empty %}
+        <div class="col-span-full rounded-2xl bg-white py-14 text-center shadow-card ring-1 ring-slate-900/5">
+            <p class="text-lg font-bold text-slate-700">Nothing here right now</p>
+            <p class="mt-1 text-sm text-slate-500">Check back soon, or browse the categories.</p>
+            <a href="{% url 'all_categories' %}" class="mt-5 inline-flex items-center rounded-xl bg-brand-100 px-5 py-2.5 text-sm font-bold text-brand-700">Browse categories</a>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

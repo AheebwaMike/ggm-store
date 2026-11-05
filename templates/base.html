@@ -33,7 +33,7 @@
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
     <link rel="icon" href="/static/icons/favicon.ico" type="image/x-icon">
 
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=5">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=6">
 
     <!-- Lucide icons, pinned and served from our own static files -->
     <script src="{% static 'vendor/lucide-1.67.0.min.js' %}"></script>
@@ -302,6 +302,27 @@
             document.addEventListener('htmx:afterSwap', function () {
                 if (window.lucide) window.lucide.createIcons();
                 syncCartBadges();
+            });
+
+            // Toasts sent by the server (HX-Trigger: {"ggmToast": {"message": "...", "kind": "error"}}).
+            document.body.addEventListener('ggmToast', function (evt) {
+                const detail = evt.detail || {};
+                if (detail.message) window.ggmToast(detail.message, detail.kind);
+            });
+
+            // The same product can appear on several shelves at once. When one card's button or stepper
+            // changes, copy the new state to the other copies so they never disagree.
+            document.addEventListener('htmx:afterSwap', function (evt) {
+                const swapped = evt.target;
+                if (!swapped || !swapped.classList || !swapped.classList.contains('card-ctl')) return;
+                const productId = swapped.getAttribute('data-product-id');
+                document.querySelectorAll('.card-ctl[data-product-id="' + productId + '"]').forEach(function (other) {
+                    if (other === swapped) return;
+                    const copy = swapped.cloneNode(true);
+                    other.replaceWith(copy);
+                    if (window.htmx) window.htmx.process(copy);
+                });
+                if (window.lucide) window.lucide.createIcons();
             });
 
             // Any control marked data-add-to-cart gets a pop animation and a toast.

@@ -1,0 +1,12 @@
+{# One page of the "Discover more" grid. When more is available, the last element loads the next page as it scrolls into view. #}
+{% for item in discover_items %}
+    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product %}
+{% endfor %}
+{% if discover_has_more %}
+<div class="col-span-full grid h-16 place-items-center text-xs font-semibold text-slate-400"
+     hx-get="{% url 'discover' %}?page={{ discover_next_page }}"
+     hx-trigger="revealed"
+     hx-swap="outerHTML">
+    Loading more…
+</div>
+{% endif %}

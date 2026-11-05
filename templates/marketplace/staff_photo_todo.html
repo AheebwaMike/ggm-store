@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Product photos - GGM Store{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl">
+    <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">Products to photograph</h1>
+    <p class="mt-1 text-sm text-slate-500">Best sellers first, so every photo you add helps the home page most.</p>
+
+    <div class="mt-4 grid grid-cols-3 gap-3">
+        <div class="rounded-2xl bg-white p-4 shadow-card ring-1 ring-slate-900/5">
+            <p class="text-[11px] font-bold uppercase text-slate-500">Products</p>
+            <p class="text-2xl font-extrabold text-slate-800">{{ total }}</p>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow-card ring-1 ring-slate-900/5">
+            <p class="text-[11px] font-bold uppercase text-slate-500">With a photo</p>
+            <p class="text-2xl font-extrabold text-green-600">{{ with_photo }}</p>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow-card ring-1 ring-slate-900/5">
+            <p class="text-[11px] font-bold uppercase text-slate-500">Still missing</p>
+            <p class="text-2xl font-extrabold text-brand-600">{{ missing }}</p>
+        </div>
+    </div>
+
+    {% if config.shelves_require_photo %}
+    <p class="mt-3 rounded-xl bg-brand-50 p-3 text-xs font-medium text-brand-800 ring-1 ring-brand-200/70">
+        Home page shelves only show products that have a photo. You can change this in the Store Configuration in the admin.
+    </p>
+    {% else %}
+    <p class="mt-3 rounded-xl bg-yellow-50 p-3 text-xs font-medium text-yellow-800 ring-1 ring-yellow-200">
+        Shelves currently also show products without a photo. Turn the photo rule back on in the Store Configuration when most photos are done.
+    </p>
+    {% endif %}
+
+    <ul class="mt-4 divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
+        {% for product in products %}
+        <li class="flex items-center gap-3 px-4 py-3">
+            <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold leading-snug text-slate-800">{{ product.name }}</p>
+                <p class="mt-0.5 text-xs text-slate-400">
+                    {{ product.code }}{% if product.group %} · {{ product.group.name }}{% endif %} · UGX {{ product.selling_price|floatformat:"0g" }}
+                </p>
+            </div>
+            <span class="shrink-0 text-xs font-semibold text-slate-500">{{ product.sold|floatformat:"-1" }} sold</span>
+            <a href="{% url 'admin:marketplace_product_change' product.pk %}" target="_blank" rel="noopener"
+               class="shrink-0 rounded-xl bg-brand-600 px-3 py-2 text-xs font-bold text-white">Add photo</a>
+        </li>
+        {% empty %}
+        <li class="p-8 text-center text-sm text-slate-500">Every product has a photo. Well done!</li>
+        {% endfor %}
+    </ul>
+    {% if missing > 100 %}<p class="mt-3 text-center text-xs text-slate-400">Showing the first 100 of {{ missing }}.</p>{% endif %}
+</div>
+{% endblock %}

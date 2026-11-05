@@ -14,6 +14,7 @@ variant that has a photo, so a group never looks empty because one size lacks an
 The wrapper decides the width (grid cell, or w-40 shrink-0 inside .snap-row); the card fills it.
 Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is for the detail page.
 {% endcomment %}
+{% load ggm_ui %}
 {% with img=image_product|default:product %}
 <article class="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
 
@@ -61,15 +62,7 @@ Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is f
         {% elif product.stock_quantity <= 0 or product.manually_disabled %}
             {# no button: the overlay says why #}
         {% else %}
-            <button type="button"
-                    hx-post="{% url 'add_to_cart' product.id %}"
-                    hx-swap="none"
-                    data-add-to-cart
-                    data-name="{{ product.name }}"
-                    class="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 shadow-card ring-1 ring-slate-900/5 transition-transform active:scale-90"
-                    aria-label="Add {{ product.name }} to cart">
-                <i data-lucide="plus" class="h-5 w-5"></i>
-            </button>
+            {% include "marketplace/_card_control.html" with product=product qty=cart_quantities|get_item:product.id %}
         {% endif %}
     </div>
 

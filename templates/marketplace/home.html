@@ -87,9 +87,38 @@
     </div>
 
 {% else %}
+    {# ---------------- Popular searches ---------------- #}
+    <div class="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Popular searches">
+        {% for word in popular_searches %}
+        <a href="{% url 'home' %}?q={{ word|urlencode }}" class="shrink-0 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 shadow-card ring-1 ring-slate-900/5 active:scale-95">{{ word }}</a>
+        {% endfor %}
+    </div>
+
+    {# ---------------- Category row ---------------- #}
+    {% if pinned_groups %}
+    <section class="mb-6" aria-labelledby="categories-title">
+        <div class="mb-1 flex items-center justify-between">
+            <h2 id="categories-title" class="text-[17px] font-extrabold tracking-tight text-slate-800">Shop by category</h2>
+            <a href="{% url 'all_categories' %}" class="text-sm font-bold text-brand-600">See all {{ category_count }}</a>
+        </div>
+        <div class="snap-row no-scrollbar">
+            {% for group in pinned_groups %}
+            <a href="{% url 'product_list' group.id %}" class="flex w-[4.75rem] flex-col items-center gap-1.5 text-center active:scale-95">
+                <span class="grid h-14 w-14 place-items-center rounded-full text-2xl ring-1 ring-slate-900/5 {% cycle 'bg-orange-100' 'bg-amber-100' 'bg-lime-100' 'bg-sky-100' 'bg-rose-100' %}" aria-hidden="true">{{ group.name|group_emoji }}</span>
+                <span class="break-words text-[11px] font-semibold leading-tight text-slate-700">{{ group.name }}</span>
+            </a>
+            {% endfor %}
+            <a href="{% url 'all_categories' %}" class="flex w-[4.75rem] flex-col items-center gap-1.5 text-center active:scale-95">
+                <span class="grid h-14 w-14 place-items-center rounded-full bg-slate-900 text-white" aria-hidden="true"><i data-lucide="layout-grid" class="h-6 w-6"></i></span>
+                <span class="text-[11px] font-semibold leading-tight text-slate-700">All categories</span>
+            </a>
+        </div>
+    </section>
+    {% endif %}
+
     {# ---------------- Delivery promise ---------------- #}
     {% if config.free_delivery_threshold > 0 %}
-    <div class="mb-5 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 ring-1 ring-brand-200/70">
+    <div class="mb-6 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 ring-1 ring-brand-200/70">
         <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-white">
             <i data-lucide="bike" class="h-5 w-5"></i>
         </span>
@@ -100,25 +129,9 @@
     </div>
     {% endif %}
 
-    {# ---------------- Categories ---------------- #}
-    <section class="mb-7" aria-labelledby="categories-title">
-        <h2 id="categories-title" class="mb-3 text-[17px] font-extrabold tracking-tight text-slate-800">Shop by category</h2>
-        <div class="grid grid-cols-4 gap-2.5 sm:grid-cols-6 md:grid-cols-8">
-            {% for group in groups %}
-                <a href="{% url 'product_list' group.id %}"
-                   class="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-2.5 text-center shadow-card ring-1 ring-slate-900/5 transition-transform active:scale-95">
-                    <span class="grid h-12 w-12 place-items-center rounded-xl text-2xl {% cycle 'bg-orange-100' 'bg-amber-100' 'bg-lime-100' 'bg-sky-100' 'bg-rose-100' %}" aria-hidden="true">{{ group.name|group_emoji }}</span>
-                    <span class="break-words text-[11px] font-semibold leading-tight text-slate-700">{{ group.name }}</span>
-                </a>
-            {% empty %}
-                <p class="col-span-full py-8 text-center text-slate-500">No categories yet.</p>
-            {% endfor %}
-        </div>
-    </section>
-
     {# ---------------- Buy again ---------------- #}
     {% if frequent_products %}
-    <section class="mb-7" aria-labelledby="buy-again-title">
+    <section class="mb-6" aria-labelledby="buy-again-title">
         <h2 id="buy-again-title" class="mb-1 text-[17px] font-extrabold tracking-tight text-slate-800">Buy again</h2>
         <div class="snap-row no-scrollbar">
             {% for product in frequent_products %}
@@ -130,9 +143,9 @@
     </section>
     {% endif %}
 
-    {# ---------------- Featured ---------------- #}
+    {# ---------------- Featured campaign ---------------- #}
     {% if featured_products %}
-    <section class="mb-7" aria-labelledby="featured-title">
+    <section class="mb-6" aria-labelledby="featured-title">
         <h2 id="featured-title" class="mb-1 text-[17px] font-extrabold tracking-tight text-slate-800">Featured today</h2>
         <div class="snap-row no-scrollbar">
             {% for product in featured_products %}
@@ -142,6 +155,46 @@
             {% endfor %}
         </div>
     </section>
+    {% endif %}
+
+    {# ---------------- Shelves (managed in the admin) ---------------- #}
+    {% for block in shelves %}
+    <section class="mb-6" aria-labelledby="shelf-{{ block.shelf.id }}-title">
+        <div class="mb-1 flex items-center justify-between">
+            <h2 id="shelf-{{ block.shelf.id }}-title" class="text-[17px] font-extrabold tracking-tight text-slate-800">{{ block.shelf.title }}</h2>
+            {% if block.shelf.kind == 'category' and block.shelf.group_id %}
+                <a href="{% url 'product_list' block.shelf.group_id %}" class="text-sm font-bold text-brand-600">See all</a>
+            {% else %}
+                <a href="{% url 'shelf_detail' block.shelf.id %}" class="text-sm font-bold text-brand-600">See all</a>
+            {% endif %}
+        </div>
+        <div class="snap-row no-scrollbar">
+            {% for item in block.items %}
+                <div class="w-[9.5rem]">
+                    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product %}
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+
+    {# ---------------- Discover more (keeps loading as you scroll) ---------------- #}
+    {% if discover_items %}
+    <section class="mb-4" aria-labelledby="discover-title">
+        <h2 id="discover-title" class="mb-3 text-[17px] font-extrabold tracking-tight text-slate-800">Discover more</h2>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {% include "marketplace/_discover_page.html" %}
+        </div>
+    </section>
+    {% elif not shelves and not frequent_products and not featured_products %}
+    <div class="rounded-2xl bg-white p-8 text-center shadow-card ring-1 ring-slate-900/5">
+        <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-brand-50">
+            <i data-lucide="shopping-basket" class="h-8 w-8 text-brand-500"></i>
+        </div>
+        <p class="text-lg font-bold text-slate-700">Our shelves are being stocked</p>
+        <p class="mt-1 text-sm text-slate-500">Use the search box or browse the categories above.</p>
+        <a href="{% url 'all_categories' %}" class="mt-5 inline-flex items-center rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white">Browse all categories</a>
+    </div>
     {% endif %}
 {% endif %}
 {% endblock %}
