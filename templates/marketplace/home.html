@@ -104,7 +104,7 @@
         <div class="snap-row no-scrollbar">
             {% for group in pinned_groups %}
             <a href="{% url 'product_list' group.id %}" class="flex w-[4.75rem] flex-col items-center gap-1.5 text-center active:scale-95">
-                <span class="grid h-14 w-14 place-items-center rounded-full text-2xl ring-1 ring-slate-900/5 {% cycle 'bg-orange-100' 'bg-amber-100' 'bg-lime-100' 'bg-sky-100' 'bg-rose-100' %}" aria-hidden="true">{{ group.name|group_emoji }}</span>
+                <span class="grid h-14 w-14 place-items-center overflow-hidden rounded-full text-2xl ring-1 ring-slate-900/5 {% cycle 'bg-orange-100' 'bg-amber-100' 'bg-lime-100' 'bg-sky-100' 'bg-rose-100' %}" aria-hidden="true">{% if group.image %}<img src="{{ group.image.url }}" alt="" class="h-full w-full object-cover" loading="lazy" decoding="async">{% else %}{{ group.name|group_emoji }}{% endif %}</span>
                 <span class="break-words text-[11px] font-semibold leading-tight text-slate-700">{{ group.name }}</span>
             </a>
             {% endfor %}

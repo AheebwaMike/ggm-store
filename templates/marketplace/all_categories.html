@@ -23,7 +23,7 @@
         {% for group in groups %}
         <li data-name="{{ group.name|lower }}">
             <a href="{% url 'product_list' group.id %}" class="flex items-center gap-3 px-4 py-3 active:bg-slate-50">
-                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-xl {% cycle 'bg-orange-100' 'bg-amber-100' 'bg-lime-100' 'bg-sky-100' 'bg-rose-100' %}" aria-hidden="true">{{ group.name|group_emoji }}</span>
+                <span class="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl text-xl {% cycle 'bg-orange-100' 'bg-amber-100' 'bg-lime-100' 'bg-sky-100' 'bg-rose-100' %}" aria-hidden="true">{% if group.image %}<img src="{{ group.image.url }}" alt="" class="h-full w-full object-cover" loading="lazy" decoding="async">{% else %}{{ group.name|group_emoji }}{% endif %}</span>
                 <span class="min-w-0 flex-1 text-sm font-semibold text-slate-800">{{ group.name }}</span>
                 <span class="shrink-0 text-xs text-slate-400">{{ group.available }} item{{ group.available|pluralize }}</span>
                 <i data-lucide="chevron-right" class="h-4 w-4 shrink-0 text-slate-300"></i>

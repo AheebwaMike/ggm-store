@@ -23,10 +23,19 @@ from .models import (
 
 @admin.register(ProductGroup)
 class ProductGroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'home_order')
+    list_display = ('name', 'home_order', 'image_preview')
     list_editable = ('home_order',)
     search_fields = ('name',)
     ordering = ('name',)
+
+    @admin.display(description='Image')
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />',
+                obj.image.url,
+            )
+        return 'No image'
 
 
 @admin.register(Unit)

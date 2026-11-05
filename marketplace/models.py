@@ -10,6 +10,12 @@ from marketplace.storage import CloudinaryMediaStorage
 
 class ProductGroup(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    image = models.ImageField(
+        upload_to='product_groups/',
+        null=True,
+        blank=True,
+        storage=CloudinaryMediaStorage(),
+    )
     home_order = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
