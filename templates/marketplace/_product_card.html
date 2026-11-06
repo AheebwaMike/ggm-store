@@ -6,7 +6,7 @@ Plain product (Buy Again / Featured carousels):
     {% include "marketplace/_product_card.html" with product=product promo=True %}
 
 Item from _group_products (search results and category pages):
-    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product %}
+    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product kind_label=item.kind_label %}
 
 image_product (optional): the product whose photo to show. For a variant group it is the first
 variant that has a photo, so a group never looks empty because one size lacks an image.
@@ -36,7 +36,7 @@ Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is f
         {% if promo %}
             <span class="pointer-events-none absolute left-2 top-2 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">Promo</span>
         {% elif is_group %}
-            <span class="pointer-events-none absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-700 shadow-sm">{{ variant_count }} options</span>
+            <span class="pointer-events-none absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-700 shadow-sm">{% if kind_label %}{{ kind_label }}{% else %}{{ variant_count }} options{% endif %}</span>
         {% endif %}
 
         {# Unavailable overlay: only for single products (for a group the cheapest option says nothing about the others) #}
@@ -50,9 +50,11 @@ Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is f
 
         {# Action button, bottom-right of the image #}
         {% if is_group %}
+            {# Opens the options sheet; without JavaScript it simply goes to the product page #}
             <a href="{% url 'product_detail' product.id %}"
+               hx-get="{% url 'product_options' product.id %}" hx-target="#sheet-root" hx-swap="innerHTML"
                class="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 shadow-card ring-1 ring-slate-900/5 transition-transform active:scale-90"
-               aria-label="Choose an option for {{ parent_name|default:product.name }}">
+               aria-label="Choose a size or flavour of {{ parent_name|default:product.name }}">
                 <i data-lucide="plus" class="h-5 w-5"></i>
             </a>
         {% elif not config.is_open %}

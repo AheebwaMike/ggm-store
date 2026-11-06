@@ -141,3 +141,18 @@ html {
 .success-pop {
     animation: ggm-success-pop 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
+
+/* ---- Options sheet slides up from the bottom on phones ---- */
+@keyframes ggm-sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+@keyframes ggm-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.sheet-panel { animation: ggm-sheet-up 0.22s ease-out; }
+.sheet-backdrop { animation: ggm-fade-in 0.18s ease-out; }
+@media (min-width: 768px) {
+    .sheet-panel { animation: none; }
+}

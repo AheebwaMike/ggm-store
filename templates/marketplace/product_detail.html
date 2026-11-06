@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ggm_ui %}
 
 {% block title %}{{ product.parent_group|default:product.name }} - GGM Store{% endblock %}
 
@@ -40,7 +41,7 @@
 
         {% if variants|length > 1 %}
         <div class="mt-4">
-            <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Choose an option</p>
+            <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Choose a {{ variants|kind_word }}</p>
             <div class="flex flex-wrap gap-2">
                 {% for variant in variants %}
                 <button type="button"
