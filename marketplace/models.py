@@ -48,6 +48,12 @@ class Product(models.Model):
         null=True,
         help_text="The specific variant shown to the customer (e.g., '1KG', '25KG', 'Chilli')",
     )
+    variant_kind = models.CharField(
+        max_length=10,
+        blank=True,
+        choices=[('size', 'Sizes'), ('flavour', 'Flavours'), ('pack', 'Packs'), ('type', 'Types')],
+        help_text="Optional. Used on the card, for example '3 flavours'. Leave blank to guess from the labels.",
+    )
     group = models.ForeignKey(ProductGroup, on_delete=models.SET_NULL, null=True, blank=True)
     unit = models.ForeignKey(Unit, on_delete=models.SET_NULL, null=True, blank=True)
     
