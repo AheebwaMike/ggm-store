@@ -62,3 +62,10 @@ def get_item(mapping, key):
         return mapping.get(str(key), 0)
     except AttributeError:
         return 0
+
+
+@register.filter
+def kind_word(variants):
+    """'size', 'flavour', 'option'... for a list of variants, e.g. 'Choose a {{ variants|kind_word }}'."""
+    from marketplace.shelves import family_kind, kind_word as word
+    return word(family_kind(list(variants)))

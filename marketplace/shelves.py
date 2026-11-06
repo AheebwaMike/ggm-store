@@ -3,6 +3,7 @@
 Everything here is data-driven and honest: a shelf only appears when it has enough real products,
 "popular" means really sold recently, and "new" means really added recently.
 """
+import re
 from datetime import timedelta
 from decimal import Decimal
 
@@ -52,6 +53,45 @@ def _units_sold(extra=None):
     return Coalesce(Sum('orderitem__quantity', filter=condition), Value(Decimal('0')), output_field=DecimalField())
 
 
+# ------------------------------------------------------------------ what kind of choice a family offers
+
+_MEASURE = re.compile(
+    r'^\s*(\d+([.,]\d+)?|\d+/\d+|half|quarter)?\s*'
+    r'(kgs?|kilos?|g|gm|gms|mg|l|ltrs?|litres?|liters?|ml|cl|oz|lbs?|pcs?|pieces?|packs?|pkts?|packets?|dozen|'
+    r'tins?|sachets?|bottles?|cartons?|bags?|boxes|box|rolls?|sheets?)\b',
+    re.IGNORECASE,
+)
+_SIZE_WORDS = {'small', 'medium', 'large', 'xl', 'xxl', 'mini', 'jumbo', 'family', 'regular', 's', 'm', 'l'}
+_KIND_PLURALS = {'size': 'sizes', 'flavour': 'flavours', 'pack': 'packs', 'type': 'types', 'option': 'options'}
+_KIND_SINGULARS = {'size': 'size', 'flavour': 'flavour', 'pack': 'pack', 'type': 'type', 'option': 'option'}
+
+
+def _looks_like_a_size(label):
+    label = (label or '').strip()
+    return bool(label) and (bool(_MEASURE.match(label)) or label.lower() in _SIZE_WORDS)
+
+
+def family_kind(variants):
+    """'size', 'flavour', 'pack', 'type' (set in the admin) or a guess: all-measure labels mean sizes, else 'option'."""
+    explicit = next((v.variant_kind for v in variants if getattr(v, 'variant_kind', '')), '')
+    if explicit:
+        return explicit
+    labels = [v.variant_label for v in variants]
+    if labels and all(_looks_like_a_size(label) for label in labels):
+        return 'size'
+    return 'option'
+
+
+def kind_label(kind, count):
+    """'3 sizes', '5 flavours', '4 options'."""
+    return f'{count} {_KIND_PLURALS.get(kind, "options")}'
+
+
+def kind_word(kind):
+    """'size', 'flavour' ... for sentences such as 'Choose a size'."""
+    return _KIND_SINGULARS.get(kind, 'option')
+
+
 # ------------------------------------------------------------------ turning products into cards
 
 def simple_item(product):
@@ -65,6 +105,7 @@ def family_item(variants, parent_name):
     """One card for a family of sizes or flavours: shows 'From UGX ...'."""
     variants = sorted(variants, key=lambda v: (v.selling_price, v.name))
     representative = variants[0]
+    kind = family_kind(variants)
     return {
         'product': representative,
         'image_product': next((v for v in variants if v.image), representative),
@@ -72,6 +113,8 @@ def family_item(variants, parent_name):
         'min_price': variants[0].selling_price,
         'max_price': variants[-1].selling_price,
         'variant_count': len(variants),
+        'kind': kind,
+        'kind_label': kind_label(kind, len(variants)),
         'parent_name': parent_name,
     }
 

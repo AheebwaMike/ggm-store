@@ -23,19 +23,10 @@ from .models import (
 
 @admin.register(ProductGroup)
 class ProductGroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'home_order', 'image_preview')
+    list_display = ('name', 'home_order')
     list_editable = ('home_order',)
     search_fields = ('name',)
     ordering = ('name',)
-
-    @admin.display(description='Image')
-    def image_preview(self, obj):
-        if obj.image:
-            return format_html(
-                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />',
-                obj.image.url,
-            )
-        return 'No image'
 
 
 @admin.register(Unit)
@@ -65,6 +56,7 @@ class ProductAdmin(admin.ModelAdmin):
         'name',
         'parent_group',
         'variant_label',
+        'variant_kind',
         'group',
         'unit',
         'selling_price',
@@ -73,7 +65,7 @@ class ProductAdmin(admin.ModelAdmin):
         'is_active',
         'image_preview',
     )
-    list_editable = ('parent_group', 'variant_label')
+    list_editable = ('parent_group', 'variant_label', 'variant_kind')
     list_filter = (HasPhotoFilter, 'is_active', 'group', 'unit', 'parent_group', 'low_stock_threshold')
     search_fields = ('code', 'name', 'parent_group')
     readonly_fields = ('image_preview',)

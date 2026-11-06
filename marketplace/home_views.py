@@ -9,10 +9,10 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
-from .models import Customer, FeaturedCampaign, Product, Shelf
+from .models import Customer, FeaturedCampaign, Product, ProductGroup, Shelf
 from .shelves import (
-    OVERFETCH, _units_sold, build_items, categories_with_counts, discover_page, get_config, home_categories,
-    home_shelves, loose_products, sellable_products, seed_default_shelves, shelf_queryset,
+    OVERFETCH, _units_sold, build_items, categories_with_counts, discover_page, family_kind, get_config,
+    home_categories, home_shelves, kind_word, loose_products, sellable_products, seed_default_shelves, shelf_queryset,
 )
 
 SEARCH_LIMIT = 50
@@ -108,6 +108,34 @@ def shelf_detail(request, shelf_id):
     return render(request, 'marketplace/shelf_detail.html', {
         'shelf': shelf,
         'items': build_items(rows, sellable_products(), SHELF_PAGE_LIMIT),
+    })
+
+
+# ---------------------------------------------------------------- category page and the options sheet
+
+def product_list(request, group_id):
+    """All products of one category; sizes and flavours of the same product share one card."""
+    group = get_object_or_404(ProductGroup, id=group_id)
+    rows = list(loose_products().filter(group=group).order_by('name'))
+    return render(request, 'marketplace/product_list.html', {
+        'group': group,
+        'products': build_items(rows, loose_products(), len(rows) + 1),
+        'config': get_config(),
+    })
+
+
+def product_options(request, product_id):
+    """HTMX: the bottom sheet listing every size, flavour or pack of a product, each with its own stepper."""
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+    if product.parent_group:
+        variants = list(loose_products().filter(parent_group=product.parent_group).order_by('selling_price', 'name'))
+    else:
+        variants = [product]
+    return render(request, 'marketplace/_options_sheet.html', {
+        'product': product,
+        'variants': variants,
+        'family_name': product.parent_group or product.name,
+        'kind_word': kind_word(family_kind(variants)),
     })
 
 
