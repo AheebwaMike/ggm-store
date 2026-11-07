@@ -269,6 +269,75 @@ class FamilyScreenTests(TestCase):
         self.assertEqual((first.parent_group, first.variant_label), ('', ''))
         self.assertEqual((second.parent_group, second.variant_label), (None, None))
 
+    # ---- editing product names while grouping ----
+    def accept_with_names(self, names, products=None, **kwargs):
+        products = self.sugar if products is None else products
+        data = {'key': '0:kakira sugar', 'existing': '0', 'family_name': kwargs.get('name', 'Kakira Sugar'), 'kind': 'size'}
+        data['member'] = [p.pk for p in products]
+        data['use'] = [p.pk for p in products]
+        for product, label, name in zip(products, ['1KG', '2KG', '5KG'], names):
+            data[f'label_{product.pk}'] = label
+            if name is not None:
+                data[f'name_{product.pk}'] = name
+        return self.client.post('/staff/families/accept/', data)
+
+    def test_page_shows_editable_names_and_the_two_helper_buttons(self):
+        response = self.client.get('/staff/families/')
+        for product in self.sugar:
+            self.assertContains(response, f'name="name_{product.pk}" value="{product.name}"')
+        self.assertContains(response, 'Tidy capitals')
+        self.assertContains(response, 'Name = family + label')
+
+    def test_names_are_corrected_while_grouping(self):
+        response = self.accept_with_names(['Kakira Sugar 1KG', '  Kakira   Sugar 2KG ', 'Kakira Sugar 5KG'])
+        self.assertContains(response, 'Grouped 3 products')
+        self.assertContains(response, '3 names corrected')
+        names = [Product.objects.get(pk=p.pk).name for p in self.sugar]
+        self.assertEqual(names, ['Kakira Sugar 1KG', 'Kakira Sugar 2KG', 'Kakira Sugar 5KG'])    # extra spaces collapsed
+
+    def test_unchanged_and_missing_names_are_left_alone(self):
+        response = self.accept_with_names([self.sugar[0].name, None, 'Kakira Sugar 5KG'])
+        self.assertContains(response, '1 name corrected')
+        self.assertEqual(Product.objects.get(pk=self.sugar[1].pk).name, 'KAKIRA SUGAR 2KG')
+
+    def test_blank_or_overlong_names_are_refused_and_edits_are_kept(self):
+        blank = self.accept_with_names(['Kakira Sugar 1KG', '   ', 'Kakira Sugar 5KG'])
+        self.assertContains(blank, 'cannot be empty')
+        self.assertContains(blank, 'value="Kakira Sugar 1KG"')                      # the other edits survive on the card
+        long = self.accept_with_names(['Kakira Sugar 1KG', 'x' * 256, 'Kakira Sugar 5KG'])
+        self.assertContains(long, 'too long')
+        self.assertEqual(Product.objects.get(pk=self.sugar[0].pk).name, 'KAKIRA SUGAR 1KG')         # nothing was saved
+
+    def test_names_of_unticked_products_are_not_changed(self):
+        data = {'key': 'k:x', 'existing': '0', 'family_name': 'Kakira Sugar', 'kind': 'size',
+                'member': [p.pk for p in self.sugar], 'use': [self.sugar[0].pk, self.sugar[1].pk]}
+        for product, label in zip(self.sugar, ['1KG', '2KG', '5KG']):
+            data[f'label_{product.pk}'] = label
+            data[f'name_{product.pk}'] = 'Changed ' + label
+        self.client.post('/staff/families/accept/', data)
+        self.assertEqual(Product.objects.get(pk=self.sugar[2].pk).name, 'KAKIRA SUGAR 5KG')
+        self.assertEqual(Product.objects.get(pk=self.sugar[0].pk).name, 'Changed 1KG')
+
+    def test_undo_puts_the_old_names_back(self):
+        done = self.accept_with_names(['Kakira Sugar 1KG', 'Kakira Sugar 2KG', 'Kakira Sugar 5KG'])
+        self.client.post('/staff/families/undo/', self.undo_data(done))
+        self.assertEqual([Product.objects.get(pk=p.pk).name for p in self.sugar],
+                         ['KAKIRA SUGAR 1KG', 'KAKIRA SUGAR 2KG', 'KAKIRA SUGAR 5KG'])
+
+    def test_undo_keeps_a_name_that_someone_changed_afterwards(self):
+        done = self.accept_with_names(['Kakira Sugar 1KG', 'Kakira Sugar 2KG', 'Kakira Sugar 5KG'])
+        Product.objects.filter(pk=self.sugar[0].pk).update(name='Edited later by someone')
+        self.client.post('/staff/families/undo/', self.undo_data(done))
+        self.assertEqual(Product.objects.get(pk=self.sugar[0].pk).name, 'Edited later by someone')
+        self.assertEqual(Product.objects.get(pk=self.sugar[1].pk).name, 'KAKIRA SUGAR 2KG')
+        self.assertIsNone(Product.objects.get(pk=self.sugar[0].pk).parent_group)           # the grouping itself is still undone
+
+    def test_new_names_show_up_in_the_shop(self):
+        self.accept_with_names(['Kakira Sugar 1KG', 'Kakira Sugar 2KG', 'Kakira Sugar 5KG'])
+        make('KAKIRA SUGAR TEST DUMMY', 100)
+        html = self.client.get('/product/%d/options/' % self.sugar[0].pk).content.decode()
+        self.assertIn('Kakira Sugar', html)
+
     def test_the_same_product_ticked_twice_is_only_grouped_once(self):
         data = {'key': 'k:x', 'family_name': 'Kakira Sugar', 'kind': 'size', 'existing': '0'}
         data['member'] = [p.pk for p in self.sugar]

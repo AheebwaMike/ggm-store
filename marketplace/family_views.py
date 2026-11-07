@@ -13,7 +13,8 @@ MAX_SHOWN = 20
 KIND_CHOICES = [('', 'Guess from the labels'), ('size', 'Sizes'), ('flavour', 'Flavours'), ('pack', 'Packs'), ('type', 'Types')]
 VALID_KINDS = {value for value, _label in KIND_CHOICES}
 MAX_LABEL = 50
-MAX_NAME = 255
+MAX_NAME = 255          # family name (Product.parent_group)
+MAX_PRODUCT_NAME = 255  # Product.name
 
 
 def _ungrouped(queryset):
@@ -36,7 +37,12 @@ def _card_from_post(request, error):
     checked = {int(i) for i in request.POST.getlist('use') if i.isdigit()}
     products = {p.pk: p for p in Product.objects.filter(pk__in=member_ids)}
     members = [
-        {'product': products[pk], 'label': request.POST.get(f'label_{pk}', ''), 'checked': pk in checked}
+        {
+            'product': products[pk],
+            'name': request.POST.get(f'name_{pk}', products[pk].name),
+            'label': request.POST.get(f'label_{pk}', ''),
+            'checked': pk in checked,
+        }
         for pk in member_ids if pk in products
     ]
     return {
@@ -89,7 +95,15 @@ def staff_family_accept(request):
                     else 'Tick at least one product to add.')
 
     chosen = []
+    new_names = {}
     for product in products:
+        posted_name = request.POST.get(f'name_{product.pk}')
+        new_name = product.name if posted_name is None else ' '.join(posted_name.split())
+        if not new_name:
+            return fail(f'The name of "{product.name}" cannot be empty.')
+        if len(new_name) > MAX_PRODUCT_NAME:
+            return fail(f'The name "{new_name[:40]}..." is too long (255 characters at most).')
+        new_names[product.pk] = new_name
         label = labels[product.pk]
         if not label:
             return fail(f'"{product.name}" needs a label, for example 1KG or Chocolate.')
@@ -103,24 +117,30 @@ def staff_family_accept(request):
         return fail(f'The family already has an option called "{sorted(clash)[0]}".')
 
     previous = []
+    renamed = 0
     with transaction.atomic():
         for product in products:
             previous.append({
                 'id': product.pk,
+                'name': product.name,
+                'new_name': new_names[product.pk],
                 'parent_group': product.parent_group or '',
                 'parent_group_is_null': product.parent_group is None,
                 'label': product.variant_label or '',
                 'label_is_null': product.variant_label is None,
                 'kind': product.variant_kind,
             })
+            if new_names[product.pk] != product.name:
+                renamed += 1
+            product.name = new_names[product.pk]
             product.parent_group = family_name
             product.variant_label = labels[product.pk]
             if kind:
                 product.variant_kind = kind
-            product.save(update_fields=['parent_group', 'variant_label', 'variant_kind'])
+            product.save(update_fields=['name', 'parent_group', 'variant_label', 'variant_kind'])
 
     return render(request, 'marketplace/_family_done.html', {
-        'family_name': family_name, 'count': len(products), 'skipped': skipped, 'previous': previous,
+        'family_name': family_name, 'count': len(products), 'skipped': skipped, 'previous': previous, 'renamed': renamed,
         'added_to_existing': bool(existing_name),
     })
 
@@ -156,4 +176,9 @@ def staff_family_undo(request):
                 variant_kind=request.POST.get(f'prev_kind_{pk}', ''),
             )
             restored += updated
+            old_name = ' '.join(request.POST.get(f'prev_name_{pk}', '').split())
+            new_name = request.POST.get(f'new_name_{pk}', '')
+            if updated and old_name and new_name and old_name != new_name:
+                # only if the name is still the one we set; a later edit by someone else is left alone
+                Product.objects.filter(pk=pk, name=new_name).update(name=old_name)
     return render(request, 'marketplace/_family_undone.html', {'restored': restored, 'family_name': name})
