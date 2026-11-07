@@ -9,10 +9,12 @@
             <input type="hidden" name="prev_label_{{ item.id }}" value="{{ item.label }}">
             <input type="hidden" name="prev_label_null_{{ item.id }}" value="{% if item.label_is_null %}1{% else %}0{% endif %}">
             <input type="hidden" name="prev_kind_{{ item.id }}" value="{{ item.kind }}">
+            <input type="hidden" name="prev_name_{{ item.id }}" value="{{ item.name }}">
+            <input type="hidden" name="new_name_{{ item.id }}" value="{{ item.new_name }}">
         {% endfor %}
         <p class="text-sm font-semibold text-green-800">
             Grouped {{ count }} product{{ count|pluralize }}{% if added_to_existing %} into the existing family{% else %} as{% endif %}
-            “{{ family_name }}”.{% if skipped %} {{ skipped }} skipped (already grouped by someone else).{% endif %}
+            “{{ family_name }}”.{% if renamed %} {{ renamed }} name{{ renamed|pluralize }} corrected.{% endif %}{% if skipped %} {{ skipped }} skipped (already grouped by someone else).{% endif %}
         </p>
         <button type="button" hx-post="{% url 'staff_family_undo' %}" hx-target="closest .family-card" hx-swap="outerHTML"
                 class="h-9 rounded-xl bg-white px-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 active:scale-95">Undo</button>

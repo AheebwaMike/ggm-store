@@ -14,7 +14,8 @@
         <p class="font-bold">How this works</p>
         <ul class="mt-1 list-disc space-y-1 pl-5">
             <li>These are suggestions from the product names. <strong>Nothing changes until you press Group.</strong></li>
-            <li>Check the family name and each label (you can edit them), untick anything that does not belong, then press <strong>Group these</strong>.</li>
+            <li>Check the family name, each product name and each label (all can be edited), untick anything that does not belong, then press <strong>Group these</strong>.</li>
+            <li><strong>Correcting names:</strong> fix a misspelling once in the family name, then press <strong>Name = family + label</strong> to give every product a matching name (for example "Kakira Sugar 1KG"). <strong>Tidy capitals</strong> turns ALL CAPS names into normal ones. Both only change the boxes until you press Group.</li>
             <li>Press <strong>Not a family</strong> if the products are really different. The suggestion will not come back.</li>
             <li>You can <strong>Undo</strong> right after grouping. Later changes can be made in the admin (Products, Parent group and Variant label).</li>
             <li>"Sizes" suggestions are usually right. "Check these" suggestions only share the first words of the name, so look carefully.</li>
@@ -42,4 +43,49 @@
         {% endfor %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ---- BEGIN pure helpers (plain functions, no page access) ----
+    function tidyCapitals(text) {
+        // Units and short abbreviations stay in capitals: LTR, KG, ML, PCS (no vowels) and a few well-known ones (UHT, LED, USB)
+        const abbreviations = ['UHT', 'LED', 'USB', 'TV', 'DVD', 'UK', 'USA', 'BBQ', 'PH'];
+        const keepUpper = (word) => /^[A-Za-z]+$/.test(word) &&
+            ((!/[aeiouy]/i.test(word) && word.length <= 4) || abbreviations.includes(word.toUpperCase()));
+        return text.split(/(\s+)/).map(function (chunk) {
+            if (!chunk.trim()) return chunk;
+            if (/^\d/.test(chunk)) return chunk.toUpperCase();                       // 1KG, 500ML, 1.5L
+            if (keepUpper(chunk)) return chunk.toUpperCase();
+            return chunk.split('-').map(function (part) {
+                const lower = part.toLowerCase();
+                return lower.charAt(0).toUpperCase() + lower.slice(1);
+            }).join('-');
+        }).join('');
+    }
+    function nameFromFamily(familyName, label) {
+        const family = (familyName || '').trim();
+        const tail = (label || '').trim();
+        return tail ? (family + ' ' + tail).trim() : family;
+    }
+    // ---- END pure helpers ----
+
+    document.addEventListener('click', function (event) {
+        const tidy = event.target.closest('[data-tidy-names]');
+        const match = event.target.closest('[data-match-names]');
+        if (!tidy && !match) return;
+        const card = event.target.closest('.family-card');
+        const familyName = card.querySelector('input[name="family_name"]').value;
+        card.querySelectorAll('li').forEach(function (row) {
+            const nameInput = row.querySelector('input[name^="name_"]');
+            const labelInput = row.querySelector('input[name^="label_"]');
+            if (!nameInput) return;
+            nameInput.value = tidy ? tidyCapitals(nameInput.value) : nameFromFamily(familyName, labelInput ? labelInput.value : '');
+        });
+        if (tidy) {
+            const familyInput = card.querySelector('input[name="family_name"]');
+            familyInput.value = tidyCapitals(familyInput.value);
+        }
+    });
+</script>
 {% endblock %}
