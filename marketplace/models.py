@@ -94,6 +94,15 @@ class Product(models.Model):
         return f"{self.code} - {self.name}"
 
 
+class FamilyDismissal(models.Model):
+    """A suggested family staff marked as not a family, so it is not suggested again."""
+    key = models.CharField(max_length=300, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.key
+
+
 class Shelf(models.Model):
     """A row of products on the home page."""
     CURATED = 'curated'

@@ -1,0 +1,64 @@
+{# One family suggestion. Both buttons post the form and replace this card with the result. #}
+<article class="family-card rounded-2xl bg-white p-4 shadow-card ring-1 ring-slate-900/5">
+    <form>
+        <input type="hidden" name="key" value="{{ s.key }}">
+        <input type="hidden" name="existing" value="{% if s.existing %}1{% else %}0{% endif %}">
+
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <label class="block text-[11px] font-bold uppercase tracking-wide text-slate-500" for="name-{{ s.key }}">Family name</label>
+                <input id="name-{{ s.key }}" type="text" name="family_name" value="{{ s.name }}" maxlength="255"
+                       class="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] font-bold text-slate-800 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/15">
+            </div>
+            {% if s.confidence == 'check' %}
+                <span class="mt-5 shrink-0 rounded-full bg-yellow-50 px-2.5 py-1 text-[11px] font-bold text-yellow-700 ring-1 ring-yellow-200">Check these</span>
+            {% elif s.confidence == 'sizes' %}
+                <span class="mt-5 shrink-0 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-bold text-green-700 ring-1 ring-green-200">Sizes</span>
+            {% endif %}
+        </div>
+
+        {% if s.existing %}
+        <p class="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800">
+            A family with this name already exists{% if s.existing_count %} ({{ s.existing_count }} product{{ s.existing_count|pluralize }}){% endif %}. These products will be added to it.
+        </p>
+        {% endif %}
+
+        <ul class="mt-3 divide-y divide-slate-100 rounded-xl ring-1 ring-slate-100">
+            {% for m in s.members %}
+            <li class="flex items-center gap-3 px-3 py-2.5">
+                <input type="hidden" name="member" value="{{ m.product.id }}">
+                <input type="checkbox" name="use" value="{{ m.product.id }}" {% if m.checked %}checked{% endif %}
+                       class="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500" aria-label="Include {{ m.product.name }}">
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-semibold leading-snug text-slate-800">{{ m.product.name }}</p>
+                    <p class="text-[11px] text-slate-400">{{ m.product.code }} · UGX {{ m.product.selling_price|floatformat:"0g" }} · {{ m.product.stock_quantity|floatformat:"-2" }} in stock</p>
+                </div>
+                <div class="w-28 shrink-0">
+                    <label class="sr-only" for="label-{{ m.product.id }}">Label for {{ m.product.name }}</label>
+                    <input id="label-{{ m.product.id }}" type="text" name="label_{{ m.product.id }}" value="{{ m.label }}" maxlength="50" placeholder="Label"
+                           class="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm font-bold text-slate-800 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/15">
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+            <label class="sr-only" for="kind-{{ s.key }}">What the options are</label>
+            <select id="kind-{{ s.key }}" name="kind" class="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
+                {% for value, label in kind_choices %}
+                <option value="{{ value }}" {% if value == s.kind_guess %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button type="button"
+                    hx-post="{% url 'staff_family_accept' %}" hx-target="closest .family-card" hx-swap="outerHTML"
+                    class="h-10 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 active:scale-95">Group these</button>
+            <button type="button"
+                    hx-post="{% url 'staff_family_dismiss' %}" hx-target="closest .family-card" hx-swap="outerHTML"
+                    class="h-10 rounded-xl bg-slate-100 px-4 text-sm font-bold text-slate-700 hover:bg-slate-200 active:scale-95">Not a family</button>
+        </div>
+
+        {% if s.error %}
+        <p class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-200" role="alert">{{ s.error }}</p>
+        {% endif %}
+    </form>
+</article>

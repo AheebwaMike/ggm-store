@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Group products into families - GGM Store{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl">
+    <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">Group products into families</h1>
+    <p class="mt-1 text-sm text-slate-500">
+        A family is one product that comes in several sizes, flavours or packs, for example Kakira Sugar 1KG, 2KG and 5KG.
+        Customers then see one card with "3 sizes" instead of three separate products.
+    </p>
+
+    <div class="mt-4 rounded-2xl bg-brand-50 p-4 text-xs text-brand-800 ring-1 ring-brand-200/70">
+        <p class="font-bold">How this works</p>
+        <ul class="mt-1 list-disc space-y-1 pl-5">
+            <li>These are suggestions from the product names. <strong>Nothing changes until you press Group.</strong></li>
+            <li>Check the family name and each label (you can edit them), untick anything that does not belong, then press <strong>Group these</strong>.</li>
+            <li>Press <strong>Not a family</strong> if the products are really different. The suggestion will not come back.</li>
+            <li>You can <strong>Undo</strong> right after grouping. Later changes can be made in the admin (Products, Parent group and Variant label).</li>
+            <li>"Sizes" suggestions are usually right. "Check these" suggestions only share the first words of the name, so look carefully.</li>
+        </ul>
+    </div>
+
+    {% if total %}
+    <p class="mt-4 text-sm font-semibold text-slate-600">
+        {{ total }} possible famil{{ total|pluralize:"y,ies" }} found{% if total > shown %}. Showing the first {{ shown }}; the next ones appear as you finish these{% endif %}.
+    </p>
+    {% endif %}
+
+    <div class="mt-3 space-y-4">
+        {% for s in suggestions %}
+            {% include "marketplace/_family_card.html" %}
+        {% empty %}
+        <div class="rounded-2xl bg-white p-10 text-center shadow-card ring-1 ring-slate-900/5">
+            <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-green-50">
+                <i data-lucide="check-circle" class="h-8 w-8 text-green-500"></i>
+            </div>
+            <p class="text-lg font-bold text-slate-700">No suggestions right now</p>
+            <p class="mt-1 text-sm text-slate-500">Either everything that looks alike is already grouped, or the names are too different to guess.
+                You can still set Parent group and Variant label by hand in the admin.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

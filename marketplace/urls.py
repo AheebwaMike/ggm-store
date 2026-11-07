@@ -1,5 +1,5 @@
 from django.urls import path
-from . import home_views, qr_views, views
+from . import family_views, home_views, qr_views, views
 
 urlpatterns = [
     path('sw.js', views.service_worker, name='service_worker'),
@@ -39,6 +39,10 @@ urlpatterns = [
     path('staff/settings/', views.staff_settings, name='staff_settings'),
     path('staff/settings/upload-stock/', views.staff_upload_stock, name='staff_upload_stock'),
     path('staff/photos/', home_views.staff_photo_todo, name='staff_photo_todo'),
+    path('staff/families/', family_views.staff_families, name='staff_families'),
+    path('staff/families/accept/', family_views.staff_family_accept, name='staff_family_accept'),
+    path('staff/families/dismiss/', family_views.staff_family_dismiss, name='staff_family_dismiss'),
+    path('staff/families/undo/', family_views.staff_family_undo, name='staff_family_undo'),
     path('staff/qr/', qr_views.staff_qr_list, name='staff_qr_list'),
     path('staff/qr/<int:apartment_id>/poster/', qr_views.staff_qr_poster, name='staff_qr_poster'),
     path('staff/qr/<int:apartment_id>/download/<str:fmt>/', qr_views.staff_qr_download, name='staff_qr_download'),

@@ -7,6 +7,7 @@ from .shelves import MIN_SHELF_ITEMS, get_config, shelf_items
 from .models import (
     Apartment,
     Customer,
+    FamilyDismissal,
     FeaturedCampaign,
     Order,
     OrderItem,
@@ -183,3 +184,14 @@ class ShelfAdmin(admin.ModelAdmin):
         if count >= MIN_SHELF_ITEMS:
             return f'Yes, {count} products'
         return f'No, only {count} usable products (needs {MIN_SHELF_ITEMS})'
+
+
+@admin.register(FamilyDismissal)
+class FamilyDismissalAdmin(admin.ModelAdmin):
+    """Delete a dismissal to show that family suggestion again."""
+    list_display = ('key', 'created_at')
+    search_fields = ('key',)
+    readonly_fields = ('key', 'created_at')
+
+    def has_add_permission(self, request):
+        return False

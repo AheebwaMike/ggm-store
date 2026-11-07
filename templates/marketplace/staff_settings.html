@@ -9,6 +9,9 @@
     </div>
 
     <h1 class="text-2xl font-bold mb-4 text-slate-800">Store Settings</h1>
+    <a href="{% url 'staff_families' %}" class="mb-4 inline-flex rounded-xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700 hover:bg-orange-100">
+        Group products into families
+    </a>
 
     {% if messages %}
         {% for message in messages %}

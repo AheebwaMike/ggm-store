@@ -1,0 +1,20 @@
+<article class="family-card rounded-2xl bg-green-50 p-4 ring-1 ring-green-200">
+    <form class="flex flex-wrap items-center justify-between gap-3">
+        <input type="hidden" name="family_name" value="{{ family_name }}">
+        {# What each product looked like before, so Undo can put it back exactly (including "empty" versus "not set") #}
+        {% for item in previous %}
+            <input type="hidden" name="id" value="{{ item.id }}">
+            <input type="hidden" name="prev_parent_{{ item.id }}" value="{{ item.parent_group }}">
+            <input type="hidden" name="prev_parent_null_{{ item.id }}" value="{% if item.parent_group_is_null %}1{% else %}0{% endif %}">
+            <input type="hidden" name="prev_label_{{ item.id }}" value="{{ item.label }}">
+            <input type="hidden" name="prev_label_null_{{ item.id }}" value="{% if item.label_is_null %}1{% else %}0{% endif %}">
+            <input type="hidden" name="prev_kind_{{ item.id }}" value="{{ item.kind }}">
+        {% endfor %}
+        <p class="text-sm font-semibold text-green-800">
+            Grouped {{ count }} product{{ count|pluralize }}{% if added_to_existing %} into the existing family{% else %} as{% endif %}
+            “{{ family_name }}”.{% if skipped %} {{ skipped }} skipped (already grouped by someone else).{% endif %}
+        </p>
+        <button type="button" hx-post="{% url 'staff_family_undo' %}" hx-target="closest .family-card" hx-swap="outerHTML"
+                class="h-9 rounded-xl bg-white px-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 active:scale-95">Undo</button>
+    </form>
+</article>
