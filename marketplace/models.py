@@ -22,6 +22,18 @@ class ProductGroup(models.Model):
         help_text="Give a number (1 = first) to show this category in the row at the top of the home page. "
                   "Leave blank to keep it off that row.",
     )
+
+    @property
+    def thumbnail_url(self):
+        """Small version of the category picture (about 160x160) for the category row."""
+        if not self.image:
+            return None
+        storage = self.image.storage
+        if hasattr(storage, 'transformed_url'):
+            return storage.transformed_url(
+                self.image.name, width=160, height=160, crop='fill', gravity='auto',
+            )
+        return self.image.url
     
     def __str__(self):
         return self.name

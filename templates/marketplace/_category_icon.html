@@ -1,0 +1,16 @@
+{% load ggm_ui %}
+{% comment %}
+Picture for a category: its uploaded image when it has one, otherwise the emoji on a coloured circle.
+Decorative (the category name is the link text), so the image has empty alt text.
+
+    {% include "marketplace/_category_icon.html" with group=group box="h-14 w-14 text-2xl" tint=tint %}
+
+box    size and text classes (required)
+shape  optional, defaults to rounded-full (use rounded-xl for a rounded square)
+tint   background classes for the emoji circle (ignored when there is a photo)
+{% endcomment %}
+<span class="grid shrink-0 place-items-center overflow-hidden ring-1 ring-slate-900/5 {{ box }} {{ shape|default:'rounded-full' }}{% if not group.image %} {{ tint }}{% endif %}" aria-hidden="true">
+    {% if group.image %}
+        <img src="{% firstof group.thumbnail_url group.image.url %}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
+    {% else %}{{ group.name|group_emoji }}{% endif %}
+</span>
