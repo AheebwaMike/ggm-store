@@ -125,17 +125,26 @@ def product_list(request, group_id):
 
 
 def product_options(request, product_id):
-    """HTMX: the bottom sheet listing every size, flavour or pack of a product, each with its own stepper."""
+    """HTMX: the sheet for adding a product with variant selection and a chosen quantity."""
     product = get_object_or_404(Product, id=product_id, is_active=True)
     if product.parent_group:
-        variants = list(loose_products().filter(parent_group=product.parent_group).order_by('selling_price', 'name'))
+        variants = list(
+            loose_products()
+            .filter(parent_group=product.parent_group)
+            .order_by('selling_price', 'name')
+        )
     else:
         variants = [product]
-    return render(request, 'marketplace/_options_sheet.html', {
+
+    cart = request.session.get('cart', {})
+    current_qty = int(cart.get(str(product.id), 0))
+
+    return render(request, 'marketplace/_add_sheet.html', {
         'product': product,
         'variants': variants,
         'family_name': product.parent_group or product.name,
         'kind_word': kind_word(family_kind(variants)),
+        'current_qty': current_qty,
     })
 
 

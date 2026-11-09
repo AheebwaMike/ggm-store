@@ -15,6 +15,7 @@ urlpatterns = [
     path('a/<slug:slug>/', qr_views.apartment_landing, name='apartment_landing'),
     path('cart/', views.cart_view, name='cart_view'),
     path('cart/count/', views.cart_count, name='cart_count'),
+    path('cart/quantities/', views.cart_quantities_json, name='cart_quantities'),
     path('cart/bar/', views.cart_bar, name='cart_bar'),
     path('cart/add/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
     path('cart/card/<int:product_id>/', home_views.card_qty, name='card_qty'),

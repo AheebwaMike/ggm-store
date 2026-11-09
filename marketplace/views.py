@@ -192,23 +192,37 @@ def cart_bar(request):
 
 @require_POST
 def add_to_cart(request, product_id):
-    """Add one unit of the product to the cart. Responds with new count + HTMX trigger."""
+    """Add N units of a product and trigger cart count and toast updates."""
     if not _get_store_config().is_open:
         return HttpResponseForbidden("Store is closed")
 
     product = get_object_or_404(Product, id=product_id, is_active=True)
-    if product.manually_disabled or (product.stock_quantity or 0) <= 0:
-        return HttpResponse('Out of stock', status=409)
+    if product.manually_disabled:
+        return HttpResponse('Unavailable', status=409)
+
+    try:
+        qty = int(request.POST.get('qty', '1'))
+    except (TypeError, ValueError):
+        qty = 1
+    qty = max(1, qty)
 
     cart = _get_cart(request)
     key = str(product.id)
-    cart[key] = int(cart.get(key, 0)) + 1
+    cart[key] = int(cart.get(key, 0)) + qty
     _save_cart(request, cart)
 
     total = _cart_total_items(cart)
     response = HttpResponse(str(total))
-    response['HX-Trigger'] = 'cartUpdated'  # Fires event that navbar listens for
+    response['HX-Trigger'] = json.dumps({
+        'cartUpdated': '',
+        'ggmToast': {'message': f'Added {qty} × {product.parent_group or product.name}'},
+    })
     return response
+
+
+def cart_quantities_json(request):
+    """Return the current session cart as JSON."""
+    return JsonResponse(_get_cart(request))
 
 
 # ---------- Cart page + updates ----------

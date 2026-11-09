@@ -1,0 +1,163 @@
+<div class="fixed inset-0 z-[55]" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-backdrop absolute inset-0 bg-slate-900/50" onclick="ggmCloseSheet()"></div>
+
+    <div class="sheet-panel absolute inset-x-0 bottom-0 mx-auto flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-3xl bg-white shadow-bar md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:rounded-3xl">
+        <div class="flex items-start gap-3 px-5 pb-2 pt-5">
+            <div class="min-w-0 flex-1">
+                <p id="sheet-title" class="text-lg font-extrabold leading-snug tracking-tight text-slate-800">{{ family_name }}</p>
+                {% if current_qty > 0 %}
+                    <p class="mt-0.5 text-xs font-semibold text-brand-700">You have {{ current_qty }} in cart</p>
+                {% elif variants|length > 1 %}
+                    <p class="mt-0.5 text-xs font-medium text-slate-500">Choose a {{ kind_word }}</p>
+                {% endif %}
+            </div>
+            <button type="button" onclick="ggmCloseSheet()" aria-label="Close"
+                    class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 active:bg-slate-200">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+
+        <div class="mx-5 mb-3 aspect-[4/3] overflow-hidden rounded-2xl bg-brand-50">
+            {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="h-full w-full object-contain">
+            {% else %}
+                <span class="grid h-full w-full place-items-center text-orange-200">
+                    <i data-lucide="shopping-basket" class="h-16 w-16"></i>
+                </span>
+            {% endif %}
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-5">
+            {% if variants|length > 1 %}
+            <div class="mb-4">
+                <div class="flex flex-wrap gap-2">
+                    {% for variant in variants %}
+                    <button type="button"
+                            hx-get="{% url 'product_options' variant.id %}"
+                            hx-target="#sheet-root" hx-swap="innerHTML"
+                            class="rounded-xl border-2 px-3 py-2 text-left text-xs font-bold transition-all active:scale-95 {% if variant.id == product.id %}border-brand-600 bg-brand-50 text-brand-700{% else %}border-slate-200 bg-white text-slate-600{% endif %}">
+                        <span class="block">{{ variant.variant_label|default:variant.name }}</span>
+                        <span class="block text-[10px] font-semibold tabular-nums opacity-70">UGX {{ variant.selling_price|floatformat:"0g" }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <form hx-post="{% url 'add_to_cart' product.id %}"
+                  hx-swap="none"
+                  data-add-to-cart
+                  data-name="{{ product.parent_group|default:product.name }}{% if product.variant_label and variants|length > 1 %} {{ product.variant_label }}{% endif %}"
+                  class="mt-2">
+                <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Quantity</p>
+                <div class="mb-4 flex items-center gap-3">
+                    <button type="button" data-qty-dec
+                            class="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700 active:scale-95">
+                        <i data-lucide="minus" class="h-4 w-4"></i>
+                    </button>
+                    <input type="number" name="qty" value="1" min="1" inputmode="numeric"
+                           class="h-11 w-20 rounded-xl border-2 border-slate-200 text-center text-base font-bold tabular-nums text-slate-800 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/15">
+                    <button type="button" data-qty-inc
+                            class="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700 active:scale-95">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                    </button>
+                </div>
+
+                {% if config.is_open %}
+                    <button type="submit"
+                            class="flex w-full items-center justify-between gap-3 rounded-2xl bg-brand-600 px-5 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.98]">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="shopping-bag" class="h-5 w-5"></i> Add to cart
+                        </span>
+                        <span class="tabular-nums" data-total-preview>UGX {{ product.selling_price|floatformat:"0g" }}</span>
+                    </button>
+                {% else %}
+                    <button type="button" disabled
+                            class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3.5 text-base font-bold text-slate-400">
+                        <i data-lucide="lock" class="h-5 w-5"></i> Store is closed
+                    </button>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="border-t border-slate-100 p-4 pb-safe">
+            <button type="button" onclick="ggmCloseSheet()"
+                    class="w-full rounded-2xl bg-slate-100 py-3 text-sm font-bold text-slate-700 active:scale-[0.98]">
+                Keep shopping
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const sheet = document.currentScript.closest('.sheet-panel');
+        if (!sheet) return;
+        const form = sheet.querySelector('form[data-add-to-cart]');
+        if (!form) return;
+        const qtyInput = form.querySelector('input[name="qty"]');
+        const totalEl = form.querySelector('[data-total-preview]');
+        const price = Number('{{ product.selling_price|floatformat:"0g" }}'.replace(/,/g, '')) || 0;
+
+        function refreshTotal() {
+            const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+            qtyInput.value = qty;
+            if (totalEl) {
+                totalEl.textContent = 'UGX ' + (price * qty).toLocaleString('en-UG', { maximumFractionDigits: 0 });
+            }
+        }
+
+        const inc = form.querySelector('[data-qty-inc]');
+        const dec = form.querySelector('[data-qty-dec]');
+
+        inc?.addEventListener('click', () => {
+            if (inc.dataset.suppressClick) {
+                delete inc.dataset.suppressClick;
+                return;
+            }
+            qtyInput.value = (parseInt(qtyInput.value, 10) || 1) + 1;
+            refreshTotal();
+        });
+        dec?.addEventListener('click', () => {
+            if (dec.dataset.suppressClick) {
+                delete dec.dataset.suppressClick;
+                return;
+            }
+            qtyInput.value = Math.max(1, (parseInt(qtyInput.value, 10) || 1) - 1);
+            refreshTotal();
+        });
+        qtyInput.addEventListener('input', refreshTotal);
+
+        function holdRepeat(el, action) {
+            if (!el) return;
+            let startTimer, repeatTimer, didRepeat;
+            const begin = (e) => {
+                e.preventDefault();
+                didRepeat = false;
+                startTimer = setTimeout(() => {
+                    didRepeat = true;
+                    action();
+                    repeatTimer = setInterval(action, 80);
+                }, 400);
+            };
+            const end = (suppressClick) => {
+                clearTimeout(startTimer);
+                clearInterval(repeatTimer);
+                if (suppressClick && didRepeat) el.dataset.suppressClick = 'true';
+                didRepeat = false;
+            };
+            el.addEventListener('pointerdown', begin);
+            el.addEventListener('pointerup', () => end(true));
+            el.addEventListener('pointercancel', () => end(false));
+            el.addEventListener('pointerleave', () => end(false));
+        }
+        holdRepeat(inc, () => {
+            qtyInput.value = (parseInt(qtyInput.value, 10) || 1) + 1;
+            refreshTotal();
+        });
+        holdRepeat(dec, () => {
+            qtyInput.value = Math.max(1, (parseInt(qtyInput.value, 10) || 1) - 1);
+            refreshTotal();
+        });
+    })();
+</script>
