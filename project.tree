@@ -4,15 +4,20 @@ ggm-store/
 ├── .env.prod
 ├── .gitignore
 ├── .python-version
-├── README.md
+├── INSTRUCTIONS.txt
 ├── Procfile
+├── README.md
 ├── build.sh
+├── commit.txt
+├── db.sqlite3
 ├── manage.py
+├── project.tree
 ├── pyproject.toml
 ├── run.sh
 ├── runtime.txt
+├── tailwind.config.js
+├── todo.txt
 ├── uv.lock
-├── db.sqlite3
 ├── core/
 │   ├── __init__.py
 │   ├── asgi.py
@@ -21,26 +26,158 @@ ggm-store/
 │   └── settings/
 │       ├── __init__.py
 │       ├── base.py
-│       ├── development.py
-│       └── production.py
+│       ├── dev.py
+│       └── prod.py
+├── data/
+│   ├── products.xlsx
+│   └── stock.xlsx
+├── docs/
+│   ├── architecture-v1.md
+│   ├── overview.md
+│   └── ui-ref/
+│       ├── talabat iOS 0.png
+│       ├── talabat iOS 17.png
+│       └── talabat iOS 42.png
 ├── marketplace/
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
+│   ├── category_merge.py
+│   ├── category_views.py
 │   ├── context_processors.py
+│   ├── dashboard_stats.py
+│   ├── family_suggestions.py
+│   ├── family_views.py
+│   ├── home_views.py
 │   ├── models.py
-│   ├── tests.py
+│   ├── qr_views.py
+│   ├── shelves.py
+│   ├── storage.py
 │   ├── urls.py
 │   ├── views.py
+│   ├── tests.py
+│   ├── tests_families.py
+│   ├── tests_home.py
+│   ├── tests_migrations.py
+│   ├── tests_outreach.py
+│   ├── tests_qr.py
+│   ├── tests_static.py
 │   ├── management/
+│   │   ├── __init__.py
 │   │   └── commands/
-│   └── migrations/
+│   │       ├── __init__.py
+│   │       ├── auto_group_products.py
+│   │       ├── import_data.py
+│   │       ├── send_test_push.py
+│   │       └── upload_product_images.py
+│   ├── migrations/
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_product_manually_disabled.py
+│   │   ├── 0003_featuredcampaign.py
+│   │   ├── 0004_product_image.py
+│   │   ├── 0005_storeconfig_apartment_delivery_fee_override_and_more.py
+│   │   ├── 0006_order_note.py
+│   │   ├── 0007_product_low_stock_threshold.py
+│   │   ├── 0008_storeconfig_closed_message_storeconfig_is_open.py
+│   │   ├── 0009_alter_order_options_alter_customer_phone_number_and_more.py
+│   │   ├── 0010_storeconfig_whatsapp_number_whatsappnotificationlog.py
+│   │   ├── 0011_pushsubscription.py
+│   │   ├── 0012_product_parent_group_product_variant_label.py
+│   │   ├── 0013_order_is_modified.py
+│   │   ├── 0014_alter_product_image.py
+│   │   ├── 0015_apartment_is_served_apartment_slug_and_more.py
+│   │   ├── 0016_order_confirmed_at_order_delivered_at_and_more.py
+│   │   ├── 0017_product_created_at_productgroup_home_order_and_more.py
+│   │   ├── 0018_productgroup_image.py
+│   │   ├── 0019_product_variant_kind.py
+│   │   ├── 0020_familydismissal.py
+│   │   └── 0021_categorymerge.py
+│   └── templatetags/
+│       ├── __init__.py
+│       └── ggm_ui.py
+├── media/
+│   └── products/ (2 files)
+├── product_images/
+│   ├── product_groups/
+│   └── [141 product image files]
+├── scripts/
+│   ├── __init__.py
+│   ├── build-css.ps1
+│   ├── build_css.sh
+│   └── generate_icons.py
+├── static/
+│   ├── manifest.json
+│   ├── sw.js
+│   ├── css/
+│   │   ├── styles.css
+│   │   └── tailwind.css
+│   ├── icons/
+│   │   ├── apple-touch-icon.png
+│   │   ├── favicon.ico
+│   │   ├── icon-192.png
+│   │   ├── icon-512.png
+│   │   ├── icon-maskable-192.png
+│   │   └── icon-maskable-512.png
+│   ├── src/
+│   │   └── tailwind.input.css
+│   └── vendor/
+│       ├── htmx-1.9.12.min.js
+│       └── lucide-1.67.0.min.js
+├── staticfiles/ (generated static assets; 139 files)
 ├── templates/
 │   ├── base.html
 │   ├── marketplace/
+│   │   ├── _app_bar.html
+│   │   ├── _card_control.html
+│   │   ├── _cart_bar.html
+│   │   ├── _cart_body.html
+│   │   ├── _category_icon.html
+│   │   ├── _checkout_summary.html
+│   │   ├── _discover_page.html
+│   │   ├── _family_card.html
+│   │   ├── _family_done.html
+│   │   ├── _family_undone.html
+│   │   ├── _options_sheet.html
+│   │   ├── _order_card.html
+│   │   ├── _order_status_partial.html
+│   │   ├── _product_card.html
+│   │   ├── _product_hero.html
+│   │   ├── _product_image_placeholder.html
+│   │   ├── _product_variant_detail.html
+│   │   ├── _staff_order_items.html
+│   │   ├── _staff_order_list.html
+│   │   ├── _staff_product_row.html
+│   │   ├── _staff_substitute_search.html
+│   │   ├── _status_chip.html
+│   │   ├── _store_status_banner.html
+│   │   ├── _thumb.html
+│   │   ├── all_categories.html
+│   │   ├── apartment_not_served.html
+│   │   ├── cart.html
+│   │   ├── checkout.html
+│   │   ├── customer_order_detail.html
+│   │   ├── customer_orders.html
+│   │   ├── home.html
+│   │   ├── order_success.html
+│   │   ├── owner_dashboard.html
+│   │   ├── product_detail.html
+│   │   ├── product_list.html
+│   │   ├── shelf_detail.html
+│   │   ├── staff_category_merge.html
+│   │   ├── staff_category_merge_done.html
+│   │   ├── staff_category_merge_preview.html
+│   │   ├── staff_families.html
+│   │   ├── staff_manifest.html
+│   │   ├── staff_order_detail.html
+│   │   ├── staff_order_slip.html
+│   │   ├── staff_orders.html
+│   │   ├── staff_photo_todo.html
+│   │   ├── staff_qr_list.html
+│   │   ├── staff_qr_poster.html
+│   │   ├── staff_settings.html
+│   │   └── staff_stock.html
 │   └── registration/
-├── static/
-├── staticfiles/
-├── media/
-├── data/
-└── scripts/
+│       └── login.html
+└── tools/
+    └── tailwindcss-3.4.17.exe
