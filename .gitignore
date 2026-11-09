@@ -26,4 +26,4 @@ product_images/
 # Tailwind CSS build artifacts
 static/css/tailwind.css
 tools/
-todo/
+todo.txt
