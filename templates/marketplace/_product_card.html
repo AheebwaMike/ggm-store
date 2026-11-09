@@ -39,32 +39,31 @@ Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is f
             <span class="pointer-events-none absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-700 shadow-sm">{% if kind_label %}{{ kind_label }}{% else %}{{ variant_count }} options{% endif %}</span>
         {% endif %}
 
-        {# Unavailable overlay: only for single products (for a group the cheapest option says nothing about the others) #}
-        {% if not is_group %}
-            {% if product.stock_quantity <= 0 or product.manually_disabled %}
-                <div class="pointer-events-none absolute inset-0 grid place-items-center bg-white/70">
-                    <span class="rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold text-white">Out of stock</span>
-                </div>
-            {% endif %}
-        {% endif %}
-
-        {# Action button, bottom-right of the image #}
-        {% if is_group %}
-            {# Opens the options sheet; without JavaScript it simply goes to the product page #}
-            <a href="{% url 'product_detail' product.id %}"
-               hx-get="{% url 'product_options' product.id %}" hx-target="#sheet-root" hx-swap="innerHTML"
-               class="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 shadow-card ring-1 ring-slate-900/5 transition-transform active:scale-90"
-               aria-label="Choose a size or flavour of {{ parent_name|default:product.name }}">
-                <i data-lucide="plus" class="h-5 w-5"></i>
-            </a>
-        {% elif not config.is_open %}
+        {# Action: opens the add sheet for every product — group or single #}
+        {% if not config.is_open %}
             <span class="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-400" aria-label="Closed: the store is not taking orders">
                 <i data-lucide="lock" class="h-4 w-4"></i>
             </span>
-        {% elif product.stock_quantity <= 0 or product.manually_disabled %}
-            {# no button: the overlay says why #}
         {% else %}
-            {% include "marketplace/_card_control.html" with product=product qty=cart_quantities|get_item:product.id %}
+            {% with qty=cart_quantities|get_item:product.id %}
+            <div class="card-action absolute bottom-2 right-2 z-10" data-product-id="{{ product.id }}">
+                <a href="{% url 'product_detail' product.id %}"
+                   hx-get="{% url 'product_options' product.id %}"
+                   hx-target="#sheet-root" hx-swap="innerHTML"
+                   class="card-add-btn {% if qty %}hidden{% endif %} grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 shadow-card ring-1 ring-slate-900/5 transition-transform active:scale-90"
+                   aria-label="Add {{ parent_name|default:product.name }}">
+                    <i data-lucide="plus" class="h-5 w-5"></i>
+                </a>
+                <a href="{% url 'product_detail' product.id %}"
+                   hx-get="{% url 'product_options' product.id %}"
+                   hx-target="#sheet-root" hx-swap="innerHTML"
+                   class="card-pill-btn {% if not qty %}hidden{% endif %} flex h-9 items-center gap-1 rounded-full bg-brand-600 pl-2 pr-3 text-xs font-bold text-white shadow-card active:scale-90"
+                   aria-label="{{ qty }} in cart, tap to change">
+                    <i data-lucide="shopping-bag" class="h-3.5 w-3.5"></i>
+                    <span class="pill-qty">{{ qty }}</span>
+                </a>
+            </div>
+            {% endwith %}
         {% endif %}
     </div>
 

@@ -129,7 +129,6 @@ ggm-store/
 │   ├── base.html
 │   ├── marketplace/
 │   │   ├── _app_bar.html
-│   │   ├── _card_control.html
 │   │   ├── _cart_bar.html
 │   │   ├── _cart_body.html
 │   │   ├── _category_icon.html

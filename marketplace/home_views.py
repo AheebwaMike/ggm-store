@@ -1,13 +1,10 @@
-"""Home page and the pages around it: shelves, discover grid, all categories, card quantity stepper."""
-import json
+"""Home page and the pages around it: shelves, discover grid and all categories."""
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_POST
 
 from .models import Customer, FeaturedCampaign, Product, ProductGroup, Shelf
 from .shelves import (
@@ -146,53 +143,6 @@ def product_options(request, product_id):
         'kind_word': kind_word(family_kind(variants)),
         'current_qty': current_qty,
     })
-
-
-# ---------------------------------------------------------------- quantity stepper on product cards
-
-def _toast_response(status, message, kind='error'):
-    response = HttpResponse(message, status=status)
-    response['HX-Trigger'] = json.dumps({'ggmToast': {'message': message, 'kind': kind}})
-    return response
-
-
-@require_POST
-def card_qty(request, product_id):
-    """Change one product's quantity from its card and return the card's button or stepper."""
-    action = request.POST.get('action', 'inc')
-    product = get_object_or_404(Product, id=product_id, is_active=True)
-
-    cart = request.session.get('cart', {})
-    key = str(product.id)
-    quantity = int(cart.get(key, 0))
-    first_add = False
-
-    if action == 'inc':
-        if not get_config().is_open:
-            return _toast_response(403, 'The store is closed right now')
-        stock = product.stock_quantity or 0
-        if product.manually_disabled or stock <= 0:
-            return _toast_response(409, 'Sorry, that item is out of stock')
-        if quantity + 1 > stock:
-            return _toast_response(409, f'Only {stock:.0f} left in stock')
-        quantity += 1
-        first_add = quantity == 1
-    elif action == 'dec':
-        quantity = max(0, quantity - 1)
-
-    if quantity > 0:
-        cart[key] = quantity
-    else:
-        cart.pop(key, None)
-    request.session['cart'] = cart
-    request.session.modified = True
-
-    response = render(request, 'marketplace/_card_control.html', {'product': product, 'qty': quantity})
-    triggers = {'cartUpdated': ''}
-    if first_add:
-        triggers['ggmToast'] = {'message': f'Added: {product.name}'}
-    response['HX-Trigger'] = json.dumps(triggers)
-    return response
 
 
 # ---------------------------------------------------------------- staff: photo to-do list

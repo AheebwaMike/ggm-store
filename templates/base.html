@@ -301,6 +301,36 @@
                 });
             }
 
+            async function syncCardPills() {
+                try {
+                    const res = await fetch('{% url "cart_quantities" %}', { credentials: 'same-origin' });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    document.querySelectorAll('.card-action').forEach((el) => {
+                        const pid = el.dataset.productId;
+                        const qty = Number(data[pid] || 0);
+                        const addBtn = el.querySelector('.card-add-btn');
+                        const pillBtn = el.querySelector('.card-pill-btn');
+                        const pillQty = el.querySelector('.pill-qty');
+                        if (!addBtn || !pillBtn) return;
+                        if (qty > 0) {
+                            addBtn.classList.add('hidden');
+                            pillBtn.classList.remove('hidden');
+                            if (pillQty) pillQty.textContent = qty;
+                            pillBtn.setAttribute('aria-label', qty + ' in cart, tap to change');
+                        } else {
+                            addBtn.classList.remove('hidden');
+                            pillBtn.classList.add('hidden');
+                        }
+                    });
+                } catch (e) {
+                    // Network issue: leave cards as-is.
+                }
+            }
+
+            document.body.addEventListener('cartUpdated', syncCardPills);
+            document.body.addEventListener('htmx:afterSwap', syncCardPills);
+
             // HTMX swaps bring in new <i data-lucide> placeholders.
             document.addEventListener('htmx:afterSwap', function () {
                 if (window.lucide) window.lucide.createIcons();
@@ -334,9 +364,14 @@
             });
             document.addEventListener('htmx:afterSwap', function (evt) {
                 if (!evt.target || evt.target.id !== 'sheet-root') return;
-                document.body.classList.add('overflow-hidden');
-                const first = evt.target.querySelector('button, a');
-                if (first) first.focus();
+                const empty = !evt.target.innerHTML.trim();
+                if (empty) {
+                    document.body.classList.remove('overflow-hidden');
+                } else {
+                    document.body.classList.add('overflow-hidden');
+                    const first = evt.target.querySelector('button, a');
+                    if (first) first.focus();
+                }
             });
 
             // Toasts sent by the server (HX-Trigger: {"ggmToast": {"message": "...", "kind": "error"}}).
@@ -345,35 +380,23 @@
                 if (detail.message) window.ggmToast(detail.message, detail.kind);
             });
 
-            // The same product can appear on several shelves at once. When one card's button or stepper
-            // changes, copy the new state to the other copies so they never disagree.
-            document.addEventListener('htmx:afterSwap', function (evt) {
-                const swapped = evt.target;
-                if (!swapped || !swapped.classList || !swapped.classList.contains('card-ctl')) return;
-                const productId = swapped.getAttribute('data-product-id');
-                document.querySelectorAll('.card-ctl[data-product-id="' + productId + '"]').forEach(function (other) {
-                    if (other === swapped) return;
-                    const copy = swapped.cloneNode(true);
-                    other.replaceWith(copy);
-                    if (window.htmx) window.htmx.process(copy);
-                });
-                if (window.lucide) window.lucide.createIcons();
-            });
-
-            // Any control marked data-add-to-cart gets a pop animation and a toast.
+            // Any control marked data-add-to-cart gets a pop animation and feedback.
             document.addEventListener('htmx:afterRequest', function (evt) {
                 const el = evt.detail.elt;
                 if (!el || !el.hasAttribute || !el.hasAttribute('data-add-to-cart')) return;
+                const popTarget = el.tagName === 'FORM' ? el.querySelector('button[type="submit"]') : el;
 
                 if (evt.detail.successful) {
-                    el.classList.add('pop');
-                    setTimeout(() => el.classList.remove('pop'), 320);
-                    const name = el.getAttribute('data-name');
-                    window.ggmToast(name ? 'Added: ' + name : 'Added to cart');
-                } else if (evt.detail.xhr && evt.detail.xhr.status === 409) {
-                    window.ggmToast('Sorry, that item is out of stock', 'error');
+                    if (popTarget) {
+                        popTarget.classList.add('pop');
+                        setTimeout(() => popTarget.classList.remove('pop'), 320);
+                    }
+                    // Toast comes from the server's HX-Trigger (ggmToast) with the exact quantity.
+                    if (typeof window.ggmCloseSheet === 'function') window.ggmCloseSheet();
                 } else if (evt.detail.xhr && evt.detail.xhr.status === 403) {
                     window.ggmToast('The store is closed right now', 'error');
+                } else if (evt.detail.xhr && evt.detail.xhr.status === 409) {
+                    window.ggmToast('That item is unavailable right now', 'error');
                 } else {
                     window.ggmToast('Could not add that item. Try again.', 'error');
                 }

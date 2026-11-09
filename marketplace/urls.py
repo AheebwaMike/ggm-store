@@ -18,7 +18,6 @@ urlpatterns = [
     path('cart/quantities/', views.cart_quantities_json, name='cart_quantities'),
     path('cart/bar/', views.cart_bar, name='cart_bar'),
     path('cart/add/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
-    path('cart/card/<int:product_id>/', home_views.card_qty, name='card_qty'),
     path('cart/update/<int:product_id>/', views.cart_update, name='cart_update'),
     path('checkout/', views.checkout, name='checkout'),
     path('checkout/summary/', views.checkout_summary_partial, name='checkout_summary_partial'),
