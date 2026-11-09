@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Check the merge - GGM Store{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl">
+    <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">Check the merge</h1>
+    <p class="mt-1 text-sm text-slate-500">Nothing has changed yet. Read this, then confirm.</p>
+
+    <section class="mt-4 rounded-2xl bg-white p-5 shadow-card ring-1 ring-slate-900/5">
+        <p class="text-lg font-extrabold text-slate-800">
+            Move <span class="text-brand-600">{{ plan.total }} product{{ plan.total|pluralize }}</span> into
+            {% if plan.target %}“{{ plan.target.name }}”{% else %}a new category called “{{ plan.new_name }}”{% endif %}
+        </p>
+        {% if plan.target and plan.target_count %}
+            <p class="mt-1 text-sm text-slate-500">“{{ plan.target.name }}” already has {{ plan.target_count }} product{{ plan.target_count|pluralize }}; they stay where they are.</p>
+        {% endif %}
+
+        <ul class="mt-4 divide-y divide-slate-100 rounded-xl ring-1 ring-slate-100">
+            {% for row in plan.sources %}
+            <li class="flex items-center gap-3 px-3 py-2.5">
+                <span class="min-w-0 flex-1 text-sm font-semibold text-slate-800">{{ row.group.name }}</span>
+                {% if row.pinned %}<span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700">pinned</span>{% endif %}
+                {% if row.shelves %}<span class="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">{{ row.shelves }} shelf{{ row.shelves|pluralize:",ves" }}</span>{% endif %}
+                <span class="shrink-0 text-sm font-bold tabular-nums text-slate-600">{{ row.count }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <ul class="mt-4 list-disc space-y-1 pl-5 text-xs text-slate-600">
+            <li>The emptied categories are <strong>not deleted</strong>. Customers stop seeing them because they have no products. You can delete them in the admin when you are happy.</li>
+            {% if plan.shelves %}<li>{{ plan.shelves }} home page shelf{{ plan.shelves|pluralize:",ves" }} that showed one of these categories will show the target instead.</li>{% endif %}
+            {% if plan.pinned %}<li>Pinned categories leave the category row at the top of the home page. {% if plan.target %}If the target is not pinned, it takes the place of the first one.{% else %}The new category takes the place of the first one.{% endif %}</li>{% endif %}
+            <li>You can undo this merge right afterwards.</li>
+        </ul>
+    </section>
+
+    <form method="post" action="{% url 'staff_category_merge_apply' %}" class="mt-4 flex flex-wrap items-center gap-3">
+        {% csrf_token %}
+        {% for source_id in source_ids %}<input type="hidden" name="source" value="{{ source_id }}">{% endfor %}
+        <input type="hidden" name="target_mode" value="{{ target_mode }}">
+        <input type="hidden" name="target" value="{{ target_id }}">
+        <input type="hidden" name="new_name" value="{{ new_name }}">
+        <button type="submit" class="h-12 flex-1 rounded-2xl bg-brand-600 px-6 text-base font-bold text-white shadow-sm hover:bg-brand-700 active:scale-[0.98]">Confirm and move {{ plan.total }} product{{ plan.total|pluralize }}</button>
+        <a href="{% url 'staff_category_merge' %}" class="h-12 rounded-2xl bg-white px-6 text-base font-bold leading-[3rem] text-slate-700 ring-1 ring-slate-200">Go back</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Merge categories - GGM Store{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl">
+    <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">Merge categories</h1>
+    <p class="mt-1 text-sm text-slate-500">
+        Move every product of one or more categories into a single category. Nothing changes until you confirm on the next page, and you can undo afterwards.
+    </p>
+
+    {% if notice %}<p class="mt-4 rounded-xl bg-green-50 p-3 text-sm font-semibold text-green-800 ring-1 ring-green-200" role="status">{{ notice }}</p>{% endif %}
+    {% if error %}<p class="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-200" role="alert">{{ error }}</p>{% endif %}
+
+    <form method="post" action="{% url 'staff_category_merge' %}" class="mt-5 space-y-5">
+        {% csrf_token %}
+
+        <section class="rounded-2xl bg-white p-4 shadow-card ring-1 ring-slate-900/5">
+            <h2 class="text-base font-extrabold text-slate-800">1. Which categories do you want to merge?</h2>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+                <label class="sr-only" for="merge-filter">Find a category</label>
+                <input id="merge-filter" type="search" autocomplete="off" placeholder="Find a category…"
+                       class="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/15">
+                <button type="button" id="tick-shown" class="h-10 rounded-xl bg-slate-100 px-3 text-xs font-bold text-slate-700 hover:bg-slate-200">Tick all shown</button>
+                <button type="button" id="clear-ticks" class="h-10 rounded-xl bg-slate-100 px-3 text-xs font-bold text-slate-700 hover:bg-slate-200">Clear</button>
+            </div>
+            <ul id="merge-list" class="mt-3 max-h-96 divide-y divide-slate-100 overflow-y-auto rounded-xl ring-1 ring-slate-100">
+                {% for group in categories %}
+                <li data-name="{{ group.name|lower }}">
+                    <label class="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-slate-50">
+                        <input type="checkbox" name="source" value="{{ group.id }}" {% if group.id in ticked %}checked{% endif %}
+                               class="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <span class="min-w-0 flex-1 text-sm font-semibold text-slate-800">{{ group.name }}</span>
+                        {% if group.home_order %}<span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700">pinned</span>{% endif %}
+                        <span class="shrink-0 text-xs text-slate-400">{{ group.n }} product{{ group.n|pluralize }}</span>
+                    </label>
+                </li>
+                {% empty %}
+                <li class="p-6 text-center text-sm text-slate-500">There are no categories yet.</li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <section class="rounded-2xl bg-white p-4 shadow-card ring-1 ring-slate-900/5">
+            <h2 class="text-base font-extrabold text-slate-800">2. Where should their products go?</h2>
+            <div class="mt-3 space-y-3">
+                <label class="flex items-start gap-3">
+                    <input type="radio" name="target_mode" value="existing" {% if target_mode != 'new' %}checked{% endif %} class="mt-3 h-4 w-4 text-brand-600 focus:ring-brand-500">
+                    <span class="flex-1">
+                        <span class="block text-sm font-bold text-slate-700">An existing category</span>
+                        <select name="target" class="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/15">
+                            <option value="">Choose a category…</option>
+                            {% for group in categories %}<option value="{{ group.id }}" {% if group.id|stringformat:"s" == target_id %}selected{% endif %}>{{ group.name }} ({{ group.n }})</option>{% endfor %}
+                        </select>
+                    </span>
+                </label>
+                <label class="flex items-start gap-3">
+                    <input type="radio" name="target_mode" value="new" {% if target_mode == 'new' %}checked{% endif %} class="mt-3 h-4 w-4 text-brand-600 focus:ring-brand-500">
+                    <span class="flex-1">
+                        <span class="block text-sm font-bold text-slate-700">A new category</span>
+                        <input type="text" name="new_name" value="{{ new_name }}" maxlength="255" placeholder="Name of the new category"
+                               class="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/15">
+                    </span>
+                </label>
+            </div>
+        </section>
+
+        <button type="submit" class="h-12 w-full rounded-2xl bg-brand-600 text-base font-bold text-white shadow-sm hover:bg-brand-700 active:scale-[0.98]">Preview the merge</button>
+    </form>
+
+    {% if recent_merges %}
+    <section class="mt-8">
+        <h2 class="text-base font-extrabold text-slate-800">Recent merges</h2>
+        <ul class="mt-2 divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
+            {% for record in recent_merges %}
+            <li class="flex items-center gap-3 px-4 py-3">
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-semibold text-slate-800">{{ record.products_moved }} product{{ record.products_moved|pluralize }} into “{{ record.target_name }}”</p>
+                    <p class="text-xs text-slate-400">{{ record.created_at|date:"d M Y, H:i" }}{% if record.moves %} · from {{ record.moves|length }} categor{{ record.moves|length|pluralize:"y,ies" }}{% endif %}</p>
+                </div>
+                {% if record.undone_at %}
+                    <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500">Undone</span>
+                {% else %}
+                    <form method="post" action="{% url 'staff_category_merge_undo' record.id %}" class="shrink-0">
+                        {% csrf_token %}
+                        <button type="submit" class="h-9 rounded-xl bg-white px-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">Undo</button>
+                    </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const rows = Array.from(document.querySelectorAll('#merge-list li[data-name]'));
+        const filter = document.getElementById('merge-filter');
+        filter.addEventListener('input', function () {
+            const term = filter.value.trim().toLowerCase();
+            rows.forEach(function (row) { row.classList.toggle('hidden', !!term && !row.dataset.name.includes(term)); });
+        });
+        document.getElementById('tick-shown').addEventListener('click', function () {
+            rows.forEach(function (row) { if (!row.classList.contains('hidden')) row.querySelector('input').checked = true; });
+        });
+        document.getElementById('clear-ticks').addEventListener('click', function () {
+            rows.forEach(function (row) { row.querySelector('input').checked = false; });
+        });
+    })();
+</script>
+{% endblock %}
