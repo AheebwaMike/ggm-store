@@ -30,7 +30,8 @@
                     <a href="{% url 'product_detail' item.product.id %}" class="min-w-0 text-sm font-semibold leading-snug text-slate-800">{{ item.product.parent_group|default:item.product.name }}</a>
                     <button hx-post="{% url 'cart_update' item.product.id %}"
                             hx-vals='{"action":"remove"}'
-                            hx-target="#cart-body" hx-swap="innerHTML"
+                            hx-target="#cart-body" hx-swap="innerHTML swap:220ms"
+                            data-cart-remove
                             class="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-90"
                             aria-label="Remove {{ item.product.name }} from cart">
                         <i data-lucide="trash-2" class="h-4 w-4"></i>

@@ -361,6 +361,8 @@ class CartRemovalTests(TestCase):
 
         self.assertContains(response, f'hx-post="/cart/update/{self.product.pk}/"')
         self.assertContains(response, 'hx-vals=\'{"action":"remove"}\'')
+        self.assertContains(response, 'hx-swap="innerHTML swap:220ms"')
+        self.assertContains(response, 'data-cart-remove')
         self.assertContains(response, 'aria-label="Remove Fresh Milk from cart"')
 
     def test_direct_remove_action_removes_the_entire_item(self):
@@ -373,6 +375,10 @@ class CartRemovalTests(TestCase):
         self.assertEqual(self.client.session['cart'], {})
         self.assertContains(response, 'Your cart is empty')
         self.assertEqual(response['HX-Trigger'], 'cartUpdated')
+        self.assertEqual(
+            json.loads(response['HX-Trigger-After-Swap']),
+            {'ggmToast': {'message': 'Item Fresh Milk deleted'}},
+        )
 
 
 @PLAIN_STATIC

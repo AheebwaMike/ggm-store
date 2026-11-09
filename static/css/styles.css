@@ -93,6 +93,14 @@ html {
     animation: ggm-pop 0.28s ease-out;
 }
 
+/* ---- Cart item removal ---- */
+@keyframes ggm-cart-item-remove {
+    to { opacity: 0; transform: translateX(12px) scale(0.98); }
+}
+.cart-item-removing {
+    animation: ggm-cart-item-remove 0.22s ease-in both;
+}
+
 /* ---- Keyboard focus ---- */
 :focus-visible {
     outline: 3px solid #fdba74;

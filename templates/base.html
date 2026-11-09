@@ -33,7 +33,7 @@
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
     <link rel="icon" href="/static/icons/favicon.ico" type="image/x-icon">
 
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=7">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=8">
 
     <!-- Lucide icons, pinned and served from our own static files -->
     <script src="{% static 'vendor/lucide-1.67.0.min.js' %}"></script>
@@ -305,6 +305,22 @@
             document.addEventListener('htmx:afterSwap', function () {
                 if (window.lucide) window.lucide.createIcons();
                 syncCartBadges();
+            });
+
+            document.addEventListener('click', function (evt) {
+                const button = evt.target.closest('[data-cart-remove]');
+                if (!button) return;
+                const item = button.closest('li');
+                if (item) item.classList.add('cart-item-removing');
+            });
+
+            ['htmx:responseError', 'htmx:sendError'].forEach(function (eventName) {
+                document.addEventListener(eventName, function (evt) {
+                    const button = evt.detail.elt;
+                    if (!button || !button.hasAttribute('data-cart-remove')) return;
+                    const item = button.closest('li');
+                    if (item) item.classList.remove('cart-item-removing');
+                });
             });
 
             // Options sheet: close with the buttons, the dark backdrop or the Escape key.

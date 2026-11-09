@@ -391,6 +391,7 @@ def cart_update(request, product_id):
 
     cart = _get_cart(request)
     key = str(product_id)
+    removed_item_name = None
 
     if key in cart:
         if action == 'inc':
@@ -400,12 +401,17 @@ def cart_update(request, product_id):
             if cart[key] <= 0:
                 del cart[key]
         elif action == 'remove':
+            removed_item_name = Product.objects.filter(pk=product_id).values_list('name', flat=True).first()
             del cart[key]
 
     _save_cart(request, cart)
 
     response = render(request, 'marketplace/_cart_body.html', _cart_context(request))
     response['HX-Trigger'] = 'cartUpdated'
+    if removed_item_name:
+        response['HX-Trigger-After-Swap'] = json.dumps({
+            'ggmToast': {'message': f'Item {removed_item_name} deleted'},
+        })
     return response
 
 
