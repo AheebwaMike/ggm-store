@@ -106,6 +106,57 @@ class Product(models.Model):
         return f"{self.code} - {self.name}"
 
 
+class ProductBulkOption(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='bulk_options')
+    label = models.CharField(max_length=50, help_text="Shown to the customer, e.g. 'Carton of 12'")
+    pieces_per_pack = models.PositiveIntegerField(
+        help_text="How many single units are in one pack (e.g. 12 for a carton)",
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Fixed price for the whole pack. Not computed from the single-unit price.",
+    )
+    image = models.ImageField(
+        upload_to='bulk_options/',
+        null=True,
+        blank=True,
+        storage=CloudinaryMediaStorage(),
+    )
+    is_active = models.BooleanField(default=True)
+    position = models.PositiveSmallIntegerField(default=100, help_text="Smaller numbers appear first")
+
+    class Meta:
+        ordering = ['position', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['product', 'label'], name='unique_bulk_label_per_product'),
+        ]
+
+    def __str__(self):
+        return f"{self.product.name} — {self.label}"
+
+
+class Family(models.Model):
+    """A variant family's metadata. Linked to Product.parent_group by name (not by FK)."""
+    name = models.CharField(max_length=255, unique=True, db_index=True)
+    cover_image = models.ImageField(
+        upload_to='families/',
+        null=True,
+        blank=True,
+        storage=CloudinaryMediaStorage(),
+        help_text="Poster shot shown on the product card. Falls back to the first variant's photo if empty.",
+    )
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'Families'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class FamilyDismissal(models.Model):
     """A suggested family staff marked as not a family, so it is not suggested again."""
     key = models.CharField(max_length=300, unique=True)
@@ -406,6 +457,15 @@ class OrderItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1.00)
     price_at_time_of_order = models.DecimalField(max_digits=10, decimal_places=2) # Lock in the price
+    bulk_option = models.ForeignKey(
+        ProductBulkOption,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_items',
+    )
+    bulk_label = models.CharField(max_length=50, blank=True)
+    pieces_per_pack = models.PositiveIntegerField(default=1)
     
     def __str__(self):
         return f"{self.quantity} x {self.product.name}"

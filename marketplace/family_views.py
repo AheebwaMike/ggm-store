@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from .family_suggestions import suggest_families
-from .models import FamilyDismissal, Product
+from .models import Family, FamilyDismissal, Product
 
 MAX_SHOWN = 20
 KIND_CHOICES = [('', 'Guess from the labels'), ('size', 'Sizes'), ('flavour', 'Flavours'), ('pack', 'Packs'), ('type', 'Types')]
@@ -119,6 +119,7 @@ def staff_family_accept(request):
     previous = []
     renamed = 0
     with transaction.atomic():
+        Family.objects.get_or_create(name=family_name)
         for product in products:
             previous.append({
                 'id': product.pk,

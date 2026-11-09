@@ -6,9 +6,9 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from .models import Customer, Order, OrderItem, Product, ProductGroup, Shelf, ShelfItem, StoreConfig
+from .models import Customer, Family, Order, OrderItem, Product, ProductGroup, Shelf, ShelfItem, StoreConfig
 from .shelves import (
-    MIN_SHELF_ITEMS, build_items, categories_with_counts, discover_page, get_config, home_categories,
+    MIN_SHELF_ITEMS, build_items, categories_with_counts, discover_page, family_item, get_config, home_categories,
     home_shelves, interleave_by_group, sellable_products, seed_default_shelves, shelf_items,
 )
 
@@ -133,6 +133,17 @@ class FamilyTests(TestCase):
         config.shelves_require_photo = False
         item = build_items(list(sellable_products().order_by('selling_price')), sellable_products(), 5)[0]
         self.assertEqual(item['image_product'], with_photo)
+        self.assertIsNone(item['cover_override'])
+
+    def test_group_card_prefers_family_cover_photo(self):
+        first = make_product(name='Rice 500G', price=2000, parent='Rice', photo=False)
+        second = make_product(name='Rice 1KG', price=3500, parent='Rice')
+        family = Family.objects.create(name='Rice', cover_image='families/rice.jpg')
+
+        item = family_item([second, first], 'Rice')
+
+        self.assertEqual(item['image_product'], first)
+        self.assertEqual(item['cover_override'], family)
 
     def test_one_available_variant_is_shown_as_a_plain_product(self):
         make_product(name='Soap A', parent='Soap', label='A')

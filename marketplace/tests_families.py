@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 
 from .family_suggestions import normalise, pretty, split_name, suggest_families
-from .models import FamilyDismissal, Product, ProductGroup
+from .models import Family, FamilyDismissal, Product, ProductGroup
 
 PLAIN_STATIC = override_settings(STORAGES={
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
@@ -185,6 +185,7 @@ class FamilyScreenTests(TestCase):
     def test_grouping_sets_name_labels_and_kind(self):
         response = self.accept()
         self.assertContains(response, 'Grouped 3 products')
+        self.assertTrue(Family.objects.filter(name='Kakira Sugar').exists())
         for product, label in zip(self.sugar, ['1KG', '2KG', '5KG']):
             product.refresh_from_db()
             self.assertEqual((product.parent_group, product.variant_label, product.variant_kind), ('Kakira Sugar', label, 'size'))

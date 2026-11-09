@@ -7,11 +7,13 @@ from .shelves import MIN_SHELF_ITEMS, get_config, shelf_items
 from .models import (
     Apartment,
     Customer,
+    Family,
     FamilyDismissal,
     FeaturedCampaign,
     Order,
     OrderItem,
     Product,
+    ProductBulkOption,
     ProductGroup,
     PushSubscription,
     QRScan,
@@ -51,6 +53,13 @@ class HasPhotoFilter(admin.SimpleListFilter):
         return queryset
 
 
+class ProductBulkOptionInline(admin.TabularInline):
+    model = ProductBulkOption
+    extra = 1
+    fields = ('label', 'pieces_per_pack', 'price', 'image', 'is_active', 'position')
+    ordering = ('position', 'id')
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
@@ -71,6 +80,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = (HasPhotoFilter, 'is_active', 'group', 'unit', 'parent_group', 'low_stock_threshold')
     search_fields = ('code', 'name', 'parent_group')
     readonly_fields = ('image_preview',)
+    inlines = [ProductBulkOptionInline]
 
     def image_preview(self, obj):
         if obj.image:
@@ -79,6 +89,18 @@ class ProductAdmin(admin.ModelAdmin):
                 obj.image.url,
             )
         return "No Image"
+
+
+@admin.register(Family)
+class FamilyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'has_cover', 'created_at')
+    search_fields = ('name',)
+    readonly_fields = ('created_at',)
+
+    @admin.display(boolean=True, description='Cover set')
+    def has_cover(self, obj):
+        return bool(obj.cover_image)
+
 
 @admin.register(Apartment)
 class ApartmentAdmin(admin.ModelAdmin):

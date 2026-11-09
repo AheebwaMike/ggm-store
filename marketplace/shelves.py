@@ -103,12 +103,22 @@ def simple_item(product):
 
 def family_item(variants, parent_name):
     """One card for a family of sizes or flavours: shows 'From UGX ...'."""
+    from .models import Family
+
     variants = sorted(variants, key=lambda v: (v.selling_price, v.name))
     representative = variants[0]
     kind = family_kind(variants)
+    family = Family.objects.filter(name=parent_name).only('cover_image').first()
+    if family and family.cover_image:
+        image_product = representative
+        cover_override = family
+    else:
+        cover_override = None
+        image_product = next((v for v in variants if v.image), representative)
     return {
         'product': representative,
-        'image_product': next((v for v in variants if v.image), representative),
+        'image_product': image_product,
+        'cover_override': cover_override,
         'is_group': True,
         'min_price': variants[0].selling_price,
         'max_price': variants[-1].selling_price,
