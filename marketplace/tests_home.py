@@ -344,6 +344,38 @@ class CardStepperTests(TestCase):
 
 
 @PLAIN_STATIC
+class CartRemovalTests(TestCase):
+    def setUp(self):
+        StoreConfig.objects.create(
+            delivery_fee=Decimal('2000.00'),
+            free_delivery_threshold=Decimal('35000.00'),
+            minimum_order_value=Decimal('0.00'),
+        )
+        self.product = make_product(name='Fresh Milk')
+        session = self.client.session
+        session['cart'] = {str(self.product.pk): 10}
+        session.save()
+
+    def test_cart_item_has_a_direct_remove_button(self):
+        response = self.client.get('/cart/')
+
+        self.assertContains(response, f'hx-post="/cart/update/{self.product.pk}/"')
+        self.assertContains(response, 'hx-vals=\'{"action":"remove"}\'')
+        self.assertContains(response, 'aria-label="Remove Fresh Milk from cart"')
+
+    def test_direct_remove_action_removes_the_entire_item(self):
+        response = self.client.post(
+            f'/cart/update/{self.product.pk}/',
+            {'action': 'remove'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session['cart'], {})
+        self.assertContains(response, 'Your cart is empty')
+        self.assertEqual(response['HX-Trigger'], 'cartUpdated')
+
+
+@PLAIN_STATIC
 class StaffPhotoListTests(TestCase):
     def test_login_required_and_best_sellers_listed_first(self):
         self.assertEqual(self.client.get('/staff/photos/').status_code, 302)
