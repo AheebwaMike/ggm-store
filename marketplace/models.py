@@ -152,6 +152,24 @@ class Shelf(models.Model):
         return self.title
 
 
+class CategoryMerge(models.Model):
+    """A record of one "merge categories" action, so it can be undone."""
+    created_at = models.DateTimeField(auto_now_add=True)
+    target = models.ForeignKey(ProductGroup, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    target_name = models.CharField(max_length=255)
+    target_was_created = models.BooleanField(default=False)
+    target_home_order_before = models.PositiveSmallIntegerField(null=True, blank=True)
+    # [{"source_id": 3, "source_name": "Tea", "home_order": 2, "product_ids": [..], "shelf_ids": [..]}, ...]
+    moves = models.JSONField(default=list)
+    products_moved = models.PositiveIntegerField(default=0)
+    undone_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.products_moved} products into {self.target_name}'
+
 class ShelfItem(models.Model):
     """A product on a hand-picked shelf, in the order you want."""
     shelf = models.ForeignKey(Shelf, on_delete=models.CASCADE, related_name='items')

@@ -20,6 +20,7 @@ from .models import (
     StoreConfig,
     Unit,
     WhatsAppNotificationLog,
+    CategoryMerge,
 )
 
 @admin.register(ProductGroup)
@@ -192,6 +193,16 @@ class FamilyDismissalAdmin(admin.ModelAdmin):
     list_display = ('key', 'created_at')
     search_fields = ('key',)
     readonly_fields = ('key', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(CategoryMerge)
+class CategoryMergeAdmin(admin.ModelAdmin):
+    list_display = ('target_name', 'products_moved', 'created_at', 'undone_at')
+    readonly_fields = ('target', 'target_name', 'target_was_created', 'target_home_order_before',
+                       'moves', 'products_moved', 'created_at', 'undone_at')
 
     def has_add_permission(self, request):
         return False
