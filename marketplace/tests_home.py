@@ -1,4 +1,5 @@
 """Tests for the shop-style home page. Run with:  python manage.py test marketplace.tests_home"""
+import json
 from datetime import timedelta
 from decimal import Decimal
 
@@ -257,15 +258,26 @@ class HomePageTests(TestCase):
         self.assertContains(response, 'We are closed right now')
         self.assertNotContains(response, 'hx-vals=\'{"action":"inc"}\'')
 
-    def test_search_finds_products_including_out_of_stock(self):
+    def test_search_cards_have_no_stock_badge_and_zero_stock_can_be_added(self):
         make_product(name='Fresh Milk')
-        make_product(name='Milk Powder', stock=0)
+        zero_stock = make_product(name='Milk Powder', stock=0)
         make_product(name='Soap')
         response = self.client.get('/?q=milk')
+
         self.assertContains(response, 'Fresh Milk')
         self.assertContains(response, 'Milk Powder')
-        self.assertContains(response, 'Out of stock')
+        self.assertContains(response, 'UGX 1,000')
+        self.assertContains(response, f'hx-get="/product/{zero_stock.pk}/options/"')
+        self.assertContains(response, 'card-add-btn')
+        self.assertNotContains(response, 'Out of stock')
         self.assertNotContains(response, 'Soap')
+
+        sheet_response = self.client.get(f'/product/{zero_stock.pk}/options/')
+        self.assertEqual(sheet_response.status_code, 200)
+
+        add_response = self.client.post(f'/cart/add/{zero_stock.pk}/', {'qty': 4})
+        self.assertEqual(add_response.status_code, 200)
+        self.assertEqual(self.client.session['cart'], {str(zero_stock.pk): 4})
 
     def test_discover_and_other_pages_render(self):
         make_many(30)
@@ -287,71 +299,41 @@ class HomePageTests(TestCase):
 
 
 @PLAIN_STATIC
-class CardStepperTests(TestCase):
+class ProductCardQuantityPillTests(TestCase):
     def setUp(self):
-        self.product = make_product(name='Fresh Milk', stock=3)
-        self.url = f'/cart/card/{self.product.pk}/'
+        self.product = make_product(name='Fresh Milk', stock=0)
 
-    def cart(self):
-        return self.client.session.get('cart', {})
+    def test_card_add_button_opens_sheet_for_zero_stock_product(self):
+        response = self.client.get('/?q=Fresh')
 
-    def post(self, action):
-        return self.client.post(self.url, {'action': action})
+        self.assertContains(response, f'hx-get="/product/{self.product.pk}/options/"')
+        self.assertContains(response, 'class="card-add-btn')
+        self.assertNotContains(response, 'card-ctl')
+        self.assertNotContains(response, 'Out of stock')
 
-    def test_first_add_returns_a_stepper_and_a_toast(self):
-        response = self.post('inc')
+    def test_card_shows_cart_quantity_pill_and_sheet_current_quantity(self):
+        session = self.client.session
+        session['cart'] = {str(self.product.pk): 5}
+        session.save()
+
+        response = self.client.get('/?q=Fresh')
+        self.assertContains(response, 'class="card-pill-btn')
+        self.assertContains(response, '<span class="pill-qty">5</span>')
+        self.assertNotContains(response, 'aria-label="Decrease Fresh Milk quantity"')
+
+        sheet_response = self.client.get(f'/product/{self.product.pk}/options/')
+        self.assertContains(sheet_response, 'You have 5 in cart')
+
+    def test_adding_quantity_ignores_zero_stock_and_updates_cart_quantities(self):
+        response = self.client.post(f'/cart/add/{self.product.pk}/', {'qty': 20})
+
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'card-ctl')
-        self.assertContains(response, 'aria-live')
-        self.assertIn('cartUpdated', response['HX-Trigger'])
-        self.assertIn('Added: Fresh Milk', response['HX-Trigger'])
-        self.assertEqual(self.cart(), {str(self.product.pk): 1})
-
-    def test_increase_and_decrease_and_remove(self):
-        self.post('inc')
-        second = self.post('inc')
-        self.assertNotIn('Added:', second['HX-Trigger'])          # only the first add shouts
-        self.assertEqual(self.cart(), {str(self.product.pk): 2})
-        self.post('dec')
-        self.assertEqual(self.cart(), {str(self.product.pk): 1})
-        last = self.post('dec')
-        self.assertEqual(self.cart(), {})
-        self.assertContains(last, 'Add Fresh Milk to cart')       # back to the plain add button
-
-    def test_cannot_add_more_than_is_in_stock(self):
-        for _ in range(3):
-            self.post('inc')
-        response = self.post('inc')
-        self.assertEqual(response.status_code, 409)
-        self.assertIn('Only 3 left', response['HX-Trigger'])
-        self.assertEqual(self.cart(), {str(self.product.pk): 3})
-
-    def test_out_of_stock_and_disabled_products_cannot_be_added(self):
-        Product.objects.filter(pk=self.product.pk).update(stock_quantity=0)
-        self.assertEqual(self.post('inc').status_code, 409)
-        Product.objects.filter(pk=self.product.pk).update(stock_quantity=5, manually_disabled=True)
-        self.assertEqual(self.post('inc').status_code, 409)
-        self.assertEqual(self.cart(), {})
-
-    def test_closed_store_blocks_adding_but_not_removing(self):
-        self.post('inc')
-        StoreConfig.objects.update_or_create(pk=1, defaults={'is_open': False})
-        blocked = self.post('inc')
-        self.assertEqual(blocked.status_code, 403)
-        self.assertIn('closed', blocked['HX-Trigger'])
-        self.assertEqual(self.post('dec').status_code, 200)
-
-    def test_only_post_is_allowed_and_unknown_products_404(self):
-        self.assertEqual(self.client.get(self.url).status_code, 405)
-        self.assertEqual(self.client.post('/cart/card/99999/', {'action': 'inc'}).status_code, 404)
-
-    def test_cards_on_the_home_page_show_the_quantity_already_in_the_cart(self):
-        make_many(5)
-        self.post('inc')
-        self.post('inc')
-        html = self.client.get('/?q=Fresh').content.decode()
-        self.assertIn('aria-label="Decrease Fresh Milk quantity"', html)
-        self.assertIn('>2</span>', html)
+        self.assertEqual(self.client.session['cart'], {str(self.product.pk): 20})
+        self.assertEqual(
+            self.client.get('/cart/quantities/').json(),
+            {str(self.product.pk): 20},
+        )
+        self.assertIn('Added 20', response['HX-Trigger'])
 
 
 @PLAIN_STATIC
