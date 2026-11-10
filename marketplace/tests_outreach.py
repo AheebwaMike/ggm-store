@@ -73,7 +73,7 @@ class DeliveryTimeTests(TestCase):
         self.today = timezone.localdate()
 
     def delivered(self, total_minutes, confirm=3, packing=5):
-        created = timezone.now() - timedelta(hours=1)
+        created = timezone.localtime().replace(hour=12, minute=0, second=0, microsecond=0)
         order = make_order(self.customer, status='delivered', created=created)
         confirmed = created + timedelta(minutes=confirm)
         packed = confirmed + timedelta(minutes=packing)

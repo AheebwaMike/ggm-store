@@ -1,13 +1,20 @@
 """Tests for the apartment QR feature. Run with:  python manage.py test marketplace.tests_qr"""
 import tempfile
+import unittest
 
-import cv2
-import numpy as np
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
 from django.test import Client, TestCase, override_settings
 
 from .models import Apartment, QRScan
+
+try:
+    import cv2
+    import numpy as np
+except ImportError:
+    _CV2_AVAILABLE = False
+else:
+    _CV2_AVAILABLE = True
 
 PHONE_UA = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36'
 
@@ -119,6 +126,7 @@ class StaffToolTests(TestCase):
         self.assertContains(response, 'SITE_BASE_URL')   # warning while it is not configured
 
     @override_settings(SITE_BASE_URL='https://ggm-test.onrender.com/')
+    @unittest.skipUnless(_CV2_AVAILABLE, 'cv2 or numpy not installed')
     def test_png_contains_the_exact_link_and_is_scannable(self):
         self.client.force_login(self.staff)
         response = self.client.get(f'/staff/qr/{self.apartment.pk}/download/png/?tag=Gate')
