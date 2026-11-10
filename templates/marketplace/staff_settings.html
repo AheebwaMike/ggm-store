@@ -42,6 +42,20 @@
             <input id="whatsapp-number" type="text" name="whatsapp_number" value="{{ config.whatsapp_number }}" maxlength="20" inputmode="tel" placeholder="e.g., 256770000000" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:outline-none">
             <p class="text-xs text-slate-400 mt-1">Include country code, no '+' or spaces (e.g., 256...). Customers will message this number.</p>
         </div>
+        <div>
+            <label for="ghost-stock" class="flex items-start gap-3 cursor-pointer">
+                <input id="ghost-stock" type="checkbox" name="ghost_stock_enabled"
+                       {% if config.ghost_stock_enabled %}checked{% endif %}
+                       class="mt-1 h-5 w-5 rounded border-slate-300 text-orange-600 focus:ring-orange-500">
+                <span>
+                    <span class="block text-sm font-medium text-slate-700">Allow selling beyond stock (Ghost Stock)</span>
+                    <span class="block text-xs text-slate-500 mt-0.5">
+                        When ON, customers can order any quantity regardless of stock.
+                        When OFF, the cart and checkout respect each product's stock level.
+                    </span>
+                </span>
+            </label>
+        </div>
         <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-sm transition-all active:scale-[0.98]">
             Save Settings
         </button>

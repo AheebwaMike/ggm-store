@@ -314,6 +314,11 @@ class StoreConfig(models.Model):
         default=0.00,
         help_text="Minimum cart total to allow checkout (0 means no limit)",
     )
+    ghost_stock_enabled = models.BooleanField(
+        default=True,
+        help_text="When ON, customers can buy any quantity regardless of stock. "
+                  "When OFF, the cart and checkout respect each product's stock_quantity.",
+    )
     is_open = models.BooleanField(
         default=True,
         help_text="Toggle to stop accepting new orders",

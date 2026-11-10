@@ -1460,3 +1460,145 @@ class StoreStatusTests(TestCase):
 
         self.assertContains(response, 'Store is currently OPEN')
         self.assertContains(response, 'hx-post="/staff/toggle-store/"')
+
+
+class GhostStockBackendTests(TestCase):
+    """Backend enforcement of the ghost_stock_enabled toggle (sub-phase 3a)."""
+
+    def setUp(self):
+        self.config = StoreConfig.objects.create(ghost_stock_enabled=False)
+        self.product = Product.objects.create(
+            code='GS001',
+            name='Ghost Stock Product',
+            selling_price=Decimal('1000.00'),
+            stock_quantity=Decimal('5.00'),
+            is_active=True,
+        )
+        self.zero_stock = Product.objects.create(
+            code='GS002',
+            name='Zero Stock Product',
+            selling_price=Decimal('500.00'),
+            stock_quantity=Decimal('0.00'),
+            is_active=True,
+        )
+
+    def test_ghost_stock_defaults_to_on(self):
+        self.assertTrue(StoreConfig().ghost_stock_enabled)
+
+    def test_ghost_stock_on_allows_adding_beyond_stock(self):
+        self.config.ghost_stock_enabled = True
+        self.config.save()
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.zero_stock.pk]),
+            {'qty': '3'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'],
+            {str(self.zero_stock.pk): 3},
+        )
+
+    def test_ghost_stock_off_blocks_zero_stock_add(self):
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.zero_stock.pk]),
+            {'qty': '1'},
+        )
+        self.assertEqual(response.status_code, 409)
+
+    def test_ghost_stock_off_caps_cart_at_stock(self):
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '5'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'],
+            {str(self.product.pk): 5},
+        )
+
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '1'},
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(
+            self.client.session['cart'],
+            {str(self.product.pk): 5},
+        )
+
+    def test_ghost_stock_off_caps_cart_update_increment(self):
+        session = self.client.session
+        session['cart'] = {str(self.product.pk): 5}
+        session.save()
+
+        response = self.client.post(
+            reverse('cart_update', args=[self.product.pk]),
+            {'action': 'inc'},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(
+            self.client.session['cart'],
+            {str(self.product.pk): 5},
+        )
+
+    def test_ghost_stock_off_blocks_checkout_when_cart_exceeds_stock(self):
+        apartment = Apartment.objects.create(name='Test Apartment')
+        self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '5'},
+        )
+        self.product.stock_quantity = Decimal('2.00')
+        self.product.save()
+
+        response = self.client.post('/checkout/', {
+            'phone': '0701234567',
+            'apartment': str(apartment.pk),
+            'payment_method': 'cash',
+        })
+
+        self.assertRedirects(response, '/cart/')
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_ghost_stock_on_allows_checkout_with_zero_stock(self):
+        self.config.ghost_stock_enabled = True
+        self.config.save()
+        apartment = Apartment.objects.create(name='Test Apartment')
+        self.client.post(
+            reverse('add_to_cart', args=[self.zero_stock.pk]),
+            {'qty': '2'},
+        )
+
+        self.client.post('/checkout/', {
+            'phone': '0701234567',
+            'apartment': str(apartment.pk),
+            'payment_method': 'cash',
+        })
+
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_staff_settings_persists_ghost_stock_toggle(self):
+        staff = get_user_model().objects.create_user(
+            username='ghost-staff',
+            password='test-password',
+            is_staff=True,
+        )
+        self.client.force_login(staff)
+
+        response = self.client.post('/staff/settings/', {
+            'delivery_fee': '2000',
+            'free_delivery_threshold': '35000',
+            'minimum_order_value': '0',
+            'ghost_stock_enabled': 'on',
+        })
+        self.assertRedirects(response, '/staff/settings/')
+        self.config.refresh_from_db()
+        self.assertTrue(self.config.ghost_stock_enabled)
+
+        self.client.post('/staff/settings/', {
+            'delivery_fee': '2000',
+            'free_delivery_threshold': '35000',
+            'minimum_order_value': '0',
+        })
+        self.config.refresh_from_db()
+        self.assertFalse(self.config.ghost_stock_enabled)

@@ -193,7 +193,8 @@ def cart_bar(request):
 @require_POST
 def add_to_cart(request, product_id):
     """Add N units of a product and trigger cart count and toast updates."""
-    if not _get_store_config().is_open:
+    config = _get_store_config()
+    if not config.is_open:
         return HttpResponseForbidden("Store is closed")
 
     product = get_object_or_404(Product, id=product_id, is_active=True)
@@ -208,7 +209,12 @@ def add_to_cart(request, product_id):
 
     cart = _get_cart(request)
     key = str(product.id)
-    cart[key] = int(cart.get(key, 0)) + qty
+    current_qty = int(cart.get(key, 0))
+    stock_error = _ghost_stock_error(product, qty, current_qty, config)
+    if stock_error:
+        return HttpResponse(stock_error, status=409)
+
+    cart[key] = current_qty + qty
     _save_cart(request, cart)
 
     total = _cart_total_items(cart)
@@ -230,6 +236,18 @@ def cart_quantities_json(request):
 def _get_store_config():
     config, _ = StoreConfig.objects.get_or_create(pk=1)
     return config
+
+
+def _ghost_stock_error(product, requested_qty, current_qty=0, config=None):
+    """Return an error when the requested cart quantity exceeds stock and ghost stock is off."""
+    config = config or _get_store_config()
+    if config.ghost_stock_enabled:
+        return None
+    if product.stock_quantity <= 0:
+        return 'Out of stock'
+    if current_qty + requested_qty > product.stock_quantity:
+        return f'Only {int(product.stock_quantity)} in stock'
+    return None
 
 
 def _recalculate_order(order):
@@ -409,6 +427,18 @@ def cart_update(request, product_id):
 
     if key in cart:
         if action == 'inc':
+            config = _get_store_config()
+            if not config.ghost_stock_enabled:
+                product = Product.objects.filter(pk=product_id).first()
+                if product:
+                    stock_error = _ghost_stock_error(
+                        product,
+                        requested_qty=1,
+                        current_qty=int(cart[key]),
+                        config=config,
+                    )
+                    if stock_error:
+                        return HttpResponse(stock_error, status=409)
             cart[key] = int(cart[key]) + 1
         elif action == 'dec':
             cart[key] = int(cart[key]) - 1
@@ -445,6 +475,22 @@ def checkout(request):
             f'Minimum order value is UGX {config.minimum_order_value:,.0f}. Please add more items.',
         )
         return redirect('cart_view')
+    if not config.ghost_stock_enabled:
+        violations = []
+        for item in items:
+            product = item['product']
+            name = product.parent_group or product.name
+            if product.stock_quantity <= 0:
+                violations.append(f'{name} is out of stock.')
+            elif item['quantity'] > product.stock_quantity:
+                violations.append(
+                    f'Only {int(product.stock_quantity)} of {name} in stock — '
+                    f'you have {item["quantity"]} in your cart.'
+                )
+        if violations:
+            for message in violations:
+                messages.error(request, message)
+            return redirect('cart_view')
 
     apartments = Apartment.objects.filter(is_served=True).order_by('name')
     saved_customer = None
@@ -605,6 +651,7 @@ def staff_settings(request):
                 'closed_message',
                 config.closed_message,
             )[:255]
+            config.ghost_stock_enabled = request.POST.get('ghost_stock_enabled') == 'on'
             config.whatsapp_number = re.sub(
                 r'\D',
                 '',
