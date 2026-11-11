@@ -80,6 +80,7 @@
                                             <span>
                                                 {{ item.quantity }} × {% if item.product %}{{ item.product.parent_group|default:item.product.name }}{% else %}Removed product{% endif %}
                                                 {% if item.product.variant_label %}({{ item.product.variant_label }}){% endif %}
+                                                {% if item.bulk_option %} — {{ item.bulk_label }} ({{ item.pieces_per_pack }} pcs){% endif %}
                                             </span>
                                             <span class="whitespace-nowrap">UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
                                         </div>

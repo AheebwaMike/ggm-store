@@ -15,6 +15,11 @@
                         {% if item.product %}{{ item.product.parent_group|default:item.product.name }}{% else %}Removed product{% endif %}
                         {% if item.product and item.product.variant_label %}<span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded ml-1">{{ item.product.variant_label }}</span>{% endif %}
                     </p>
+                    {% if item.bulk_option %}
+                    <p class="mt-0.5">
+                        <span class="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">{{ item.bulk_label }} · {{ item.pieces_per_pack }} pcs</span>
+                    </p>
+                    {% endif %}
                     <p class="text-xs text-slate-500">UGX {{ item.price_at_time_of_order|floatformat:0 }}</p>
                 </div>
             </div>

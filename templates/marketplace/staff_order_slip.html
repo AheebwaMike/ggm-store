@@ -84,7 +84,7 @@
         <div class="items">
             {% for item in order.items.all %}
             <div class="item">
-                <span>{{ item.quantity }} × {% if item.product %}{{ item.product.name|truncatechars:28 }}{% else %}Removed product{% endif %}</span>
+                <span>{{ item.quantity }} × {% if item.product %}{{ item.product.name|truncatechars:24 }}{% else %}Removed product{% endif %}</span>
                 <span>UGX {{ item.price_at_time_of_order|floatformat:0 }}</span>
             </div>
             {% endfor %}
