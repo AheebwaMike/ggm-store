@@ -29,7 +29,7 @@
                 <div class="flex items-start justify-between gap-2">
                     <a href="{% url 'product_detail' item.product.id %}" class="min-w-0 text-sm font-semibold leading-snug text-slate-800">{{ item.product.parent_group|default:item.product.name }}</a>
                     <button hx-post="{% url 'cart_update' item.product.id %}"
-                            hx-vals='{"action":"remove"}'
+                            hx-vals='{"action":"remove"{% if item.bulk_option %},"bulk_option_id":"{{ item.bulk_option.id }}"{% endif %}}'
                             hx-target="#cart-body" hx-swap="innerHTML swap:220ms"
                             data-cart-remove
                             class="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:scale-90"
@@ -40,12 +40,15 @@
                 {% if item.product.variant_label %}
                     <span class="mt-1 w-fit rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{{ item.product.variant_label }}</span>
                 {% endif %}
-                <p class="mt-0.5 text-[11px] tabular-nums text-slate-400">UGX {{ item.product.selling_price|floatformat:"0g" }} each</p>
+                {% if item.bulk_option %}
+                    <span class="mt-1 w-fit rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">{{ item.bulk_label }} · {{ item.pieces_per_pack }} pcs</span>
+                {% endif %}
+                <p class="mt-0.5 text-[11px] tabular-nums text-slate-400">UGX {{ item.unit_price|floatformat:"0g" }} each</p>
 
                 <div class="mt-auto flex items-center justify-between gap-2 pt-2">
                     <div class="flex items-center rounded-full bg-slate-100 p-0.5">
                         <button hx-post="{% url 'cart_update' item.product.id %}"
-                                hx-vals='{"action":"dec"}'
+                                hx-vals='{"action":"dec"{% if item.bulk_option %},"bulk_option_id":"{{ item.bulk_option.id }}"{% endif %}}'
                                 hx-target="#cart-body" hx-swap="innerHTML"
                                 class="grid h-8 w-8 place-items-center rounded-full text-slate-600 transition active:scale-90 active:bg-white {% if item.quantity == 1 %}text-red-500{% endif %}"
                                 aria-label="{% if item.quantity == 1 %}Remove {{ item.product.name }} from cart{% else %}Decrease {{ item.product.name }} quantity{% endif %}">
@@ -54,7 +57,7 @@
                         <span class="w-7 text-center text-sm font-bold tabular-nums text-slate-800">{{ item.quantity }}</span>
                         {% if config.is_open %}
                             <button hx-post="{% url 'cart_update' item.product.id %}"
-                                    hx-vals='{"action":"inc"}'
+                                    hx-vals='{"action":"inc"{% if item.bulk_option %},"bulk_option_id":"{{ item.bulk_option.id }}"{% endif %}}'
                                     hx-target="#cart-body" hx-swap="innerHTML"
                                     class="grid h-8 w-8 place-items-center rounded-full text-slate-600 transition active:scale-90 active:bg-white"
                                     aria-label="Increase {{ item.product.name }} quantity">

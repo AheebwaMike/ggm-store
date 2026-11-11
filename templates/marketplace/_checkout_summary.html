@@ -10,6 +10,11 @@
                     <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-bold text-slate-600">{{ item.product.variant_label }}</span>
                 {% endif %}
             </p>
+            {% if item.bulk_option %}
+                <p class="mt-0.5">
+                    <span class="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">{{ item.bulk_label }} · {{ item.pieces_per_pack }} pcs</span>
+                </p>
+            {% endif %}
             <p class="mt-0.5 text-xs text-slate-400">Qty {{ item.quantity }}</p>
         </div>
         <span class="shrink-0 text-sm font-bold tabular-nums text-slate-800">UGX {{ item.line_total|floatformat:"0g" }}</span>
