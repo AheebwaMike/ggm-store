@@ -132,7 +132,7 @@
 
 <script>
     (function() {
-        const sheet = document.currentScript.closest('.sheet-panel');
+        const sheet = document.currentScript.parentElement.querySelector('.sheet-panel');
         if (!sheet) return;
         const form = sheet.querySelector('form[data-add-to-cart]');
         if (!form) return;
