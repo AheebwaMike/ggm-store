@@ -799,19 +799,6 @@ class ProductDetailTests(TestCase):
             f'hx-post="/cart/add/{self.large_variant.pk}/"',
         )
 
-    @unittest.skip(
-        'The current production template still requires an active product with positive stock.'
-    )
-    def test_unavailable_variant_still_shows_add_button_ghost_stock(self):
-        response = self.client.get(
-            reverse('product_variant_partial', args=[self.unavailable_variant.pk]),
-        )
-
-        self.assertContains(response, 'UGX 170,000')
-        self.assertContains(response, 'Add to cart')
-        self.assertNotContains(response, 'Currently unavailable')
-        self.assertNotContains(response, 'Out of stock')
-
     def test_home_and_category_product_names_link_to_detail(self):
         home_response = self.client.get('/?q=KAKIRA')
         self.assertContains(
@@ -1602,3 +1589,93 @@ class GhostStockBackendTests(TestCase):
         })
         self.config.refresh_from_db()
         self.assertFalse(self.config.ghost_stock_enabled)
+
+
+class GhostStockUITests(TestCase):
+    """Customer UI respects ghost_stock_enabled (card badges, PDP button, sheet cap hint)."""
+
+    def setUp(self):
+        self.group = ProductGroup.objects.create(name='Ghost UI Group')
+        self.zero_stock = Product.objects.create(
+            code='GSUI001',
+            name='Zero Stock Card',
+            group=self.group,
+            selling_price=Decimal('1000.00'),
+            stock_quantity=Decimal('0.00'),
+            is_active=True,
+        )
+        self.in_stock = Product.objects.create(
+            code='GSUI002',
+            name='In Stock Card',
+            group=self.group,
+            selling_price=Decimal('500.00'),
+            stock_quantity=Decimal('5.00'),
+            is_active=True,
+        )
+        self.config = StoreConfig.objects.get_or_create(pk=1)[0]
+
+    def test_card_hides_add_button_when_ghost_off_and_zero_stock(self):
+        self.config.ghost_stock_enabled = False
+        self.config.save()
+        response = self.client.get('/?q=GSUI001')
+        self.assertContains(response, 'Out of stock')
+        self.assertNotContains(
+            response,
+            f'hx-get="/product/{self.zero_stock.pk}/options/"',
+        )
+
+    def test_card_shows_add_button_when_ghost_on_and_zero_stock(self):
+        self.config.ghost_stock_enabled = True
+        self.config.save()
+        response = self.client.get('/?q=GSUI001')
+        self.assertNotContains(response, 'Out of stock')
+        self.assertContains(
+            response,
+            f'hx-get="/product/{self.zero_stock.pk}/options/"',
+        )
+
+    def test_card_always_shows_add_button_for_in_stock_product(self):
+        for ghost in (True, False):
+            self.config.ghost_stock_enabled = ghost
+            self.config.save()
+            response = self.client.get('/?q=GSUI002')
+            self.assertContains(
+                response,
+                f'hx-get="/product/{self.in_stock.pk}/options/"',
+            )
+
+    def test_pdp_shows_out_of_stock_when_ghost_off_and_zero_stock(self):
+        self.config.ghost_stock_enabled = False
+        self.config.save()
+        response = self.client.get(
+            reverse('product_variant_partial', args=[self.zero_stock.pk]),
+        )
+        self.assertContains(response, 'Out of stock')
+        self.assertNotContains(response, 'Add to cart')
+
+    def test_pdp_shows_add_button_when_ghost_on_and_zero_stock(self):
+        self.config.ghost_stock_enabled = True
+        self.config.save()
+        response = self.client.get(
+            reverse('product_variant_partial', args=[self.zero_stock.pk]),
+        )
+        self.assertContains(response, 'Add to cart')
+        self.assertNotContains(response, 'Out of stock')
+
+    def test_sheet_shows_cap_hint_when_ghost_off_and_stock_positive(self):
+        self.config.ghost_stock_enabled = False
+        self.config.save()
+        response = self.client.get(
+            reverse('product_options', args=[self.in_stock.pk]),
+        )
+        self.assertContains(response, 'Only 5 available')
+        self.assertContains(response, 'data-stock-available')
+
+    def test_sheet_hides_cap_hint_when_ghost_on(self):
+        self.config.ghost_stock_enabled = True
+        self.config.save()
+        response = self.client.get(
+            reverse('product_options', args=[self.in_stock.pk]),
+        )
+        self.assertNotContains(response, 'data-stock-available')
+        self.assertNotContains(response, 'Only 5 available')

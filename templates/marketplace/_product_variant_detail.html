@@ -12,6 +12,8 @@
             <span class="inline-flex items-center gap-1.5 rounded-lg border border-green-100 bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
                 <i data-lucide="check-circle" class="h-3 w-3"></i> In stock
             </span>
+        {% elif config.ghost_stock_enabled and product.is_active and not product.manually_disabled %}
+            {# Ghost stock ON: product is buyable even at zero stock, so no Out of stock badge #}
         {% else %}
             <span class="inline-flex items-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-3 py-1 text-xs font-bold text-red-700">
                 <i data-lucide="x-circle" class="h-3 w-3"></i> Out of stock
@@ -22,7 +24,22 @@
 
 {# Pinned to the bottom on phones, inline on desktop (see .action-bar in styles.css) #}
 <div class="action-bar">
-    {% if config.is_open and product.is_active and product.stock_quantity > 0 and not product.manually_disabled %}
+    {% if not config.is_open %}
+        <button type="button" disabled
+                class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3.5 text-base font-bold text-slate-400">
+            <i data-lucide="lock" class="h-5 w-5"></i> Store is closed
+        </button>
+    {% elif not product.is_active or product.manually_disabled %}
+        <button type="button" disabled
+                class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3.5 text-base font-bold text-slate-400">
+            <i data-lucide="x-circle" class="h-5 w-5"></i> Currently unavailable
+        </button>
+    {% elif product.stock_quantity <= 0 and not config.ghost_stock_enabled %}
+        <button type="button" disabled
+                class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3.5 text-base font-bold text-slate-400">
+            <i data-lucide="x-circle" class="h-5 w-5"></i> Out of stock
+        </button>
+    {% else %}
         <button type="button"
                 hx-post="{% url 'add_to_cart' product.id %}"
                 hx-swap="none"
@@ -33,12 +50,6 @@
                 <i data-lucide="shopping-bag" class="h-5 w-5"></i> Add to cart
             </span>
             <span class="tabular-nums">UGX {{ product.selling_price|floatformat:"0g" }}</span>
-        </button>
-    {% else %}
-        <button type="button" disabled
-                class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3.5 text-base font-bold text-slate-400">
-            <i data-lucide="x-circle" class="h-5 w-5"></i>
-            {% if not config.is_open %}Store is closed{% else %}Currently unavailable{% endif %}
         </button>
     {% endif %}
 </div>

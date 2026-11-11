@@ -10,6 +10,13 @@
                 {% elif variants|length > 1 %}
                     <p class="mt-0.5 text-xs font-medium text-slate-500">Choose a {{ kind_word }}</p>
                 {% endif %}
+                {% if not config.ghost_stock_enabled and product.stock_quantity > 0 %}
+                    <p class="mt-1 text-xs font-medium text-slate-500" data-stock-available>
+                        Only {{ product.stock_quantity|floatformat:"-2" }} available
+                    </p>
+                {% elif not config.ghost_stock_enabled and product.stock_quantity <= 0 %}
+                    <p class="mt-1 text-xs font-bold text-red-600">Out of stock</p>
+                {% endif %}
             </div>
             <button type="button" onclick="ggmCloseSheet()" aria-label="Close"
                     class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 active:bg-slate-200">
@@ -48,6 +55,10 @@
                   hx-swap="none"
                   data-add-to-cart
                   data-name="{{ product.parent_group|default:product.name }}{% if product.variant_label and variants|length > 1 %} {{ product.variant_label }}{% endif %}"
+                  data-ghost-off="{% if config.ghost_stock_enabled %}0{% else %}1{% endif %}"
+                  data-stock="{{ product.stock_quantity|floatformat:'-2' }}"
+                  data-current-qty="{{ current_qty|default:0 }}"
+                  data-price="{{ product.selling_price|floatformat:'0g' }}"
                   class="mt-2">
                 <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Quantity</p>
                 <div class="mb-4 flex items-center gap-3">
@@ -97,14 +108,35 @@
         if (!form) return;
         const qtyInput = form.querySelector('input[name="qty"]');
         const totalEl = form.querySelector('[data-total-preview]');
-        const price = Number('{{ product.selling_price|floatformat:"0g" }}'.replace(/,/g, '')) || 0;
+
+        const ghostOff = form.dataset.ghostOff === '1';
+        const stockCap = Math.max(0, Math.floor(Number(form.dataset.stock) || 0));
+        const cartQty = parseInt(form.dataset.currentQty, 10) || 0;
+        const maxAddable = ghostOff ? Math.max(0, stockCap - cartQty) : Infinity;
+        const price = Number((form.dataset.price || '').replace(/,/g, '')) || 0;
 
         function refreshTotal() {
-            const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+            if (maxAddable === 0) return;
+            let qty = parseInt(qtyInput.value, 10) || 1;
+            qty = Math.max(1, qty);
+            if (maxAddable !== Infinity) {
+                qty = Math.min(qty, maxAddable);
+            }
             qtyInput.value = qty;
             if (totalEl) {
                 totalEl.textContent = 'UGX ' + (price * qty).toLocaleString('en-UG', { maximumFractionDigits: 0 });
             }
+        }
+
+        function bumpQty(delta) {
+            if (maxAddable === 0) return;
+            const cur = parseInt(qtyInput.value, 10) || 1;
+            const next = cur + delta;
+            if (maxAddable !== Infinity && delta > 0 && next > maxAddable) {
+                return;
+            }
+            qtyInput.value = Math.max(1, maxAddable !== Infinity ? Math.min(next, maxAddable) : next);
+            refreshTotal();
         }
 
         const inc = form.querySelector('[data-qty-inc]');
@@ -115,20 +147,18 @@
                 delete inc.dataset.suppressClick;
                 return;
             }
-            qtyInput.value = (parseInt(qtyInput.value, 10) || 1) + 1;
-            refreshTotal();
+            bumpQty(1);
         });
         dec?.addEventListener('click', () => {
             if (dec.dataset.suppressClick) {
                 delete dec.dataset.suppressClick;
                 return;
             }
-            qtyInput.value = Math.max(1, (parseInt(qtyInput.value, 10) || 1) - 1);
-            refreshTotal();
+            bumpQty(-1);
         });
         qtyInput.addEventListener('input', refreshTotal);
 
-        function holdRepeat(el, action) {
+        function holdRepeat(el, delta) {
             if (!el) return;
             let startTimer, repeatTimer, didRepeat;
             const begin = (e) => {
@@ -136,8 +166,8 @@
                 didRepeat = false;
                 startTimer = setTimeout(() => {
                     didRepeat = true;
-                    action();
-                    repeatTimer = setInterval(action, 80);
+                    bumpQty(delta);
+                    repeatTimer = setInterval(() => bumpQty(delta), 80);
                 }, 400);
             };
             const end = (suppressClick) => {
@@ -151,13 +181,17 @@
             el.addEventListener('pointercancel', () => end(false));
             el.addEventListener('pointerleave', () => end(false));
         }
-        holdRepeat(inc, () => {
-            qtyInput.value = (parseInt(qtyInput.value, 10) || 1) + 1;
-            refreshTotal();
-        });
-        holdRepeat(dec, () => {
-            qtyInput.value = Math.max(1, (parseInt(qtyInput.value, 10) || 1) - 1);
-            refreshTotal();
-        });
+        holdRepeat(inc, 1);
+        holdRepeat(dec, -1);
+
+        // Ghost OFF and no room left: disable the input and submit button.
+        if (maxAddable === 0) {
+            qtyInput.disabled = true;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            }
+        }
     })();
 </script>

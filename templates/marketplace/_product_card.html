@@ -44,6 +44,10 @@ Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is f
             <span class="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-400" aria-label="Closed: the store is not taking orders">
                 <i data-lucide="lock" class="h-4 w-4"></i>
             </span>
+        {% elif not config.ghost_stock_enabled and product.stock_quantity <= 0 %}
+            <span class="absolute bottom-2 right-2 z-10 rounded-full bg-slate-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-card">
+                Out of stock
+            </span>
         {% else %}
             {% with qty=cart_quantities|get_item:product.id %}
             <div class="card-action absolute bottom-2 right-2 z-10" data-product-id="{{ product.id }}">
