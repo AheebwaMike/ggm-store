@@ -1,6 +1,8 @@
 {# When HTMX fetches a variant, also send the matching photo (swapped out-of-band into #product-hero) #}
 {% if request.META.HTTP_HX_REQUEST %}{% include "marketplace/_product_hero.html" %}{% endif %}
 
+{% load ggm_ui %}
+
 <div class="mt-5 flex items-end justify-between gap-3">
     <div>
         <p class="text-3xl font-black tabular-nums text-brand-600">UGX {{ product.selling_price|floatformat:"0g" }}</p>
@@ -22,34 +24,151 @@
     </div>
 </div>
 
-{# Pinned to the bottom on phones, inline on desktop (see .action-bar in styles.css) #}
-<div class="action-bar">
-    {% if not config.is_open %}
+{% if not config.is_open %}
+    <div class="action-bar">
         <button type="button" disabled
                 class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3.5 text-base font-bold text-slate-400">
             <i data-lucide="lock" class="h-5 w-5"></i> Store is closed
         </button>
-    {% elif not product.is_active or product.manually_disabled %}
+    </div>
+{% elif not product.is_active or product.manually_disabled %}
+    <div class="action-bar">
         <button type="button" disabled
                 class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3.5 text-base font-bold text-slate-400">
             <i data-lucide="x-circle" class="h-5 w-5"></i> Currently unavailable
         </button>
-    {% elif product.stock_quantity <= 0 and not config.ghost_stock_enabled %}
+    </div>
+{% elif product.stock_quantity <= 0 and not config.ghost_stock_enabled %}
+    <div class="action-bar">
         <button type="button" disabled
                 class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3.5 text-base font-bold text-slate-400">
             <i data-lucide="x-circle" class="h-5 w-5"></i> Out of stock
         </button>
-    {% else %}
-        <button type="button"
-                hx-post="{% url 'add_to_cart' product.id %}"
-                hx-swap="none"
-                data-add-to-cart
-                data-name="{{ product.parent_group|default:product.name }}{% if product.variant_label %} {{ product.variant_label }}{% endif %}"
-                class="flex w-full items-center justify-between gap-3 rounded-2xl bg-brand-600 px-5 py-3.5 text-base font-bold text-white shadow-sm transition active:scale-[0.98] hover:bg-brand-700">
-            <span class="flex items-center gap-2">
-                <i data-lucide="shopping-bag" class="h-5 w-5"></i> Add to cart
-            </span>
-            <span class="tabular-nums">UGX {{ product.selling_price|floatformat:"0g" }}</span>
-        </button>
-    {% endif %}
-</div>
+    </div>
+{% else %}
+    {% with current_qty=cart_quantities|get_item:product.id %}
+    <form id="pdp-add-form"
+          hx-post="{% url 'add_to_cart' product.id %}"
+          hx-swap="none"
+          data-add-to-cart
+          data-name="{{ product.parent_group|default:product.name }}{% if product.variant_label %} {{ product.variant_label }}{% endif %}"
+          data-ghost-off="{% if config.ghost_stock_enabled %}0{% else %}1{% endif %}"
+          data-stock="{{ product.stock_quantity|floatformat:'-2' }}"
+          data-current-qty="{{ current_qty }}"
+          data-price="{{ product.selling_price|floatformat:'0g' }}">
+        <div class="mt-5">
+            <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Quantity</p>
+            <div class="flex items-center gap-3">
+                <button type="button" data-qty-dec
+                        class="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700 active:scale-95">
+                    <i data-lucide="minus" class="h-4 w-4"></i>
+                </button>
+                <input type="number" name="qty" value="1" min="1" inputmode="numeric"
+                       class="h-11 w-20 rounded-xl border-2 border-slate-200 text-center text-base font-bold tabular-nums text-slate-800 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/15">
+                <button type="button" data-qty-inc
+                        class="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700 active:scale-95">
+                    <i data-lucide="plus" class="h-4 w-4"></i>
+                </button>
+            </div>
+            {% if not config.ghost_stock_enabled and product.stock_quantity > 0 %}
+                <p class="mt-1 text-xs font-medium text-slate-500" data-stock-available>
+                    Only {{ product.stock_quantity|floatformat:"-2" }} available
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="action-bar">
+            <button type="submit"
+                    class="flex w-full items-center justify-between gap-3 rounded-2xl bg-brand-600 px-5 py-3.5 text-base font-bold text-white shadow-sm transition active:scale-[0.98] hover:bg-brand-700">
+                <span class="flex items-center gap-2">
+                    <i data-lucide="shopping-bag" class="h-5 w-5"></i> Add to cart
+                </span>
+                <span class="tabular-nums" data-total-preview>UGX {{ product.selling_price|floatformat:"0g" }}</span>
+            </button>
+        </div>
+    </form>
+    <script>
+        (function() {
+            const container = document.currentScript.closest('#variant-detail-container');
+            if (!container) return;
+            const form = container.querySelector('#pdp-add-form');
+            if (!form) return;
+            const qtyInput = form.querySelector('input[name="qty"]');
+            const totalEl = form.querySelector('[data-total-preview]');
+            if (!qtyInput || !totalEl) return;
+
+            const ghostOff = form.dataset.ghostOff === '1';
+            const stockCap = Math.max(0, Math.floor(Number(form.dataset.stock) || 0));
+            const cartQty = parseInt(form.dataset.currentQty, 10) || 0;
+            const maxAddable = ghostOff ? Math.max(0, stockCap - cartQty) : Infinity;
+            const price = Number((form.dataset.price || '').replace(/,/g, '')) || 0;
+
+            function refreshTotal() {
+                if (maxAddable === 0) return;
+                let qty = parseInt(qtyInput.value, 10) || 1;
+                qty = Math.max(1, qty);
+                if (maxAddable !== Infinity) qty = Math.min(qty, maxAddable);
+                qtyInput.value = qty;
+                if (totalEl) totalEl.textContent = 'UGX ' + (price * qty).toLocaleString('en-UG', { maximumFractionDigits: 0 });
+            }
+
+            function bumpQty(delta) {
+                if (maxAddable === 0) return;
+                const cur = parseInt(qtyInput.value, 10) || 1;
+                const next = cur + delta;
+                if (maxAddable !== Infinity && delta > 0 && next > maxAddable) return;
+                qtyInput.value = Math.max(1, maxAddable !== Infinity ? Math.min(next, maxAddable) : next);
+                refreshTotal();
+            }
+
+            const inc = form.querySelector('[data-qty-inc]');
+            const dec = form.querySelector('[data-qty-dec]');
+
+            inc?.addEventListener('click', () => {
+                if (inc.dataset.suppressClick) { delete inc.dataset.suppressClick; return; }
+                bumpQty(1);
+            });
+            dec?.addEventListener('click', () => {
+                if (dec.dataset.suppressClick) { delete dec.dataset.suppressClick; return; }
+                bumpQty(-1);
+            });
+            qtyInput.addEventListener('input', refreshTotal);
+
+            function holdRepeat(el, delta) {
+                if (!el) return;
+                let startTimer, repeatTimer, didRepeat;
+                const begin = (e) => {
+                    e.preventDefault();
+                    didRepeat = false;
+                    startTimer = setTimeout(() => {
+                        didRepeat = true;
+                        bumpQty(delta);
+                        repeatTimer = setInterval(() => bumpQty(delta), 80);
+                    }, 400);
+                };
+                const end = (suppressClick) => {
+                    clearTimeout(startTimer);
+                    clearInterval(repeatTimer);
+                    if (suppressClick && didRepeat) el.dataset.suppressClick = 'true';
+                    didRepeat = false;
+                };
+                el.addEventListener('pointerdown', begin);
+                el.addEventListener('pointerup', () => end(true));
+                el.addEventListener('pointercancel', () => end(false));
+                el.addEventListener('pointerleave', () => end(false));
+            }
+            holdRepeat(inc, 1);
+            holdRepeat(dec, -1);
+
+            if (maxAddable === 0) {
+                qtyInput.disabled = true;
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                }
+            }
+        })();
+    </script>
+    {% endwith %}
+{% endif %}
