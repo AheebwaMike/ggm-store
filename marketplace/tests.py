@@ -22,6 +22,7 @@ from .models import (
     Order,
     OrderItem,
     Product,
+    ProductBulkOption,
     ProductGroup,
     PushSubscription,
     StoreConfig,
@@ -1679,3 +1680,220 @@ class GhostStockUITests(TestCase):
         )
         self.assertNotContains(response, 'data-stock-available')
         self.assertNotContains(response, 'Only 5 available')
+
+
+class BulkOptionBackendTests(TestCase):
+    """Phase 3-i: bulk options in cart, checkout and ghost-stock enforcement."""
+
+    def setUp(self):
+        self.config = StoreConfig.objects.get_or_create(pk=1)[0]
+        self.config.ghost_stock_enabled = True
+        self.config.save()
+        self.product = Product.objects.create(
+            code='BULK001',
+            name='Bulk Product',
+            selling_price=Decimal('1000.00'),
+            stock_quantity=Decimal('100.00'),
+            is_active=True,
+        )
+        self.carton = ProductBulkOption.objects.create(
+            product=self.product,
+            label='Carton of 12',
+            pieces_per_pack=12,
+            price=Decimal('11000.00'),
+            is_active=True,
+        )
+        self.half_carton = ProductBulkOption.objects.create(
+            product=self.product,
+            label='Half carton',
+            pieces_per_pack=6,
+            price=Decimal('5800.00'),
+            is_active=True,
+        )
+        self.other_product = Product.objects.create(
+            code='BULK002',
+            name='Other Product',
+            selling_price=Decimal('500.00'),
+            stock_quantity=Decimal('10.00'),
+            is_active=True,
+        )
+        self.foreign_bulk = ProductBulkOption.objects.create(
+            product=self.other_product,
+            label='Carton of 6',
+            pieces_per_pack=6,
+            price=Decimal('2500.00'),
+            is_active=True,
+        )
+
+    def test_add_bulk_option_creates_composite_key(self):
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '2', 'bulk_option_id': str(self.carton.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'],
+            {f'{self.product.pk}:{self.carton.pk}': 2},
+        )
+
+    def test_add_bulk_and_single_creates_two_lines(self):
+        self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '3'},
+        )
+        self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '1', 'bulk_option_id': str(self.carton.pk)},
+        )
+        self.assertEqual(
+            self.client.session['cart'],
+            {
+                str(self.product.pk): 3,
+                f'{self.product.pk}:{self.carton.pk}': 1,
+            },
+        )
+
+    def test_add_inactive_bulk_option_rejected(self):
+        self.carton.is_active = False
+        self.carton.save()
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '1', 'bulk_option_id': str(self.carton.pk)},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.client.session.get('cart', {}), {})
+
+    def test_add_bulk_option_from_other_product_rejected(self):
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '1', 'bulk_option_id': str(self.foreign_bulk.pk)},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_cart_details_uses_bulk_price(self):
+        session = self.client.session
+        session['cart'] = {f'{self.product.pk}:{self.carton.pk}': 2}
+        session.save()
+
+        response = self.client.get('/cart/')
+        self.assertEqual(response.status_code, 200)
+        # 2 × 11,000 = 22,000 subtotal
+        self.assertEqual(response.context['subtotal'], Decimal('22000.00'))
+
+    def test_checkout_writes_bulk_fields_onto_order_item(self):
+        apartment = Apartment.objects.create(name='Bulk Test Apartment')
+        session = self.client.session
+        session['cart'] = {
+            str(self.product.pk): 2,
+            f'{self.product.pk}:{self.carton.pk}': 1,
+        }
+        session.save()
+
+        response = self.client.post('/checkout/', {
+            'phone': '0701111111',
+            'apartment': str(apartment.pk),
+            'payment_method': 'cash',
+        })
+        order = Order.objects.get()
+        self.assertRedirects(response, f'/order/success/{order.pk}/')
+
+        single_item = order.items.get(bulk_option__isnull=True)
+        self.assertEqual(single_item.quantity, 2)
+        self.assertEqual(single_item.price_at_time_of_order, Decimal('1000.00'))
+        self.assertEqual(single_item.pieces_per_pack, 1)
+        self.assertEqual(single_item.bulk_label, '')
+
+        bulk_item = order.items.get(bulk_option=self.carton)
+        self.assertEqual(bulk_item.quantity, 1)
+        self.assertEqual(bulk_item.price_at_time_of_order, Decimal('11000.00'))
+        self.assertEqual(bulk_item.pieces_per_pack, 12)
+        self.assertEqual(bulk_item.bulk_label, 'Carton of 12')
+
+    def test_ghost_off_blocks_bulk_that_exceeds_stock_pieces(self):
+        self.config.ghost_stock_enabled = False
+        self.config.save()
+        self.product.stock_quantity = Decimal('10.00')
+        self.product.save()
+
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '1', 'bulk_option_id': str(self.carton.pk)},
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.client.session.get('cart', {}), {})
+
+    def test_ghost_off_counts_pieces_across_singles_and_bulk(self):
+        self.config.ghost_stock_enabled = False
+        self.config.save()
+        self.product.stock_quantity = Decimal('20.00')
+        self.product.save()
+
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '12'},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '1', 'bulk_option_id': str(self.carton.pk)},
+        )
+        self.assertEqual(response.status_code, 409)
+
+        response = self.client.post(
+            reverse('add_to_cart', args=[self.product.pk]),
+            {'qty': '1', 'bulk_option_id': str(self.half_carton.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_ghost_off_checkout_blocks_bulk_pieces_over_stock(self):
+        self.config.ghost_stock_enabled = False
+        self.config.save()
+        apartment = Apartment.objects.create(name='Bulk Stock Apartment')
+
+        session = self.client.session
+        session['cart'] = {f'{self.product.pk}:{self.carton.pk}': 2}
+        session.save()
+
+        self.product.stock_quantity = Decimal('10.00')
+        self.product.save()
+
+        response = self.client.post('/checkout/', {
+            'phone': '0701111111',
+            'apartment': str(apartment.pk),
+            'payment_method': 'cash',
+        })
+        self.assertRedirects(response, '/cart/')
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_cart_update_with_bulk_option_id_finds_right_key(self):
+        session = self.client.session
+        session['cart'] = {
+            str(self.product.pk): 1,
+            f'{self.product.pk}:{self.carton.pk}': 2,
+        }
+        session.save()
+
+        response = self.client.post(
+            reverse('cart_update', args=[self.product.pk]),
+            {'action': 'inc', 'bulk_option_id': str(self.carton.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'][f'{self.product.pk}:{self.carton.pk}'],
+            3,
+        )
+        self.assertEqual(self.client.session['cart'][str(self.product.pk)], 1)
+
+    def test_cart_quantities_json_excludes_bulk_lines(self):
+        session = self.client.session
+        session['cart'] = {
+            str(self.product.pk): 3,
+            f'{self.product.pk}:{self.carton.pk}': 2,
+        }
+        session.save()
+
+        response = self.client.get(reverse('cart_quantities'))
+        payload = response.json()
+        self.assertEqual(payload[str(self.product.pk)], 3)
+        self.assertNotIn(f'{self.product.pk}:{self.carton.pk}', payload)

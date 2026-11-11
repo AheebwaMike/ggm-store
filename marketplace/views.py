@@ -36,6 +36,7 @@ from .models import (
     Order,
     OrderItem,
     Product,
+    ProductBulkOption,
     ProductGroup,
     PushSubscription,
     StoreConfig,
@@ -192,7 +193,7 @@ def cart_bar(request):
 
 @require_POST
 def add_to_cart(request, product_id):
-    """Add N units of a product and trigger cart count and toast updates."""
+    """Add N packs of a product (or bulk option) and trigger cart count and toast updates."""
     config = _get_store_config()
     if not config.is_open:
         return HttpResponseForbidden("Store is closed")
@@ -201,6 +202,18 @@ def add_to_cart(request, product_id):
     if product.manually_disabled:
         return HttpResponse('Unavailable', status=409)
 
+    bulk_option_id_raw = (request.POST.get('bulk_option_id') or '').strip()
+    bulk_option = None
+    if bulk_option_id_raw:
+        try:
+            bulk_option = ProductBulkOption.objects.get(
+                id=int(bulk_option_id_raw),
+                product=product,
+                is_active=True,
+            )
+        except (ProductBulkOption.DoesNotExist, ValueError, TypeError):
+            return HttpResponse('Invalid packaging option', status=400)
+
     try:
         qty = int(request.POST.get('qty', '1'))
     except (TypeError, ValueError):
@@ -208,27 +221,39 @@ def add_to_cart(request, product_id):
     qty = max(1, qty)
 
     cart = _get_cart(request)
-    key = str(product.id)
-    current_qty = int(cart.get(key, 0))
-    stock_error = _ghost_stock_error(product, qty, current_qty, config)
+    key = f'{product.id}:{bulk_option.id}' if bulk_option else str(product.id)
+    current_pack_qty = int(cart.get(key, 0))
+
+    stock_error = _ghost_stock_error_for_bulk(product, bulk_option, qty, cart, config)
     if stock_error:
         return HttpResponse(stock_error, status=409)
 
-    cart[key] = current_qty + qty
+    cart[key] = current_pack_qty + qty
     _save_cart(request, cart)
 
     total = _cart_total_items(cart)
+    label = product.parent_group or product.name
+    if bulk_option:
+        label = f'{label} ({bulk_option.label})'
     response = HttpResponse(str(total))
     response['HX-Trigger'] = json.dumps({
         'cartUpdated': '',
-        'ggmToast': {'message': f'Added {qty} × {product.parent_group or product.name}'},
+        'ggmToast': {'message': f'Added {qty} × {label}'},
     })
     return response
 
 
 def cart_quantities_json(request):
-    """Return the current session cart as JSON."""
-    return JsonResponse(_get_cart(request))
+    """Return {product_id: singles_qty} — bulk-option lines are excluded, so the card pill
+    reflects only the customer's single-unit count for that product."""
+    cart = _get_cart(request)
+    result = {}
+    for key, qty in cart.items():
+        _base_id, _, opt_id = key.partition(':')
+        if opt_id:
+            continue
+        result[_base_id] = int(qty)
+    return JsonResponse(result)
 
 
 # ---------- Cart page + updates ----------
@@ -238,15 +263,39 @@ def _get_store_config():
     return config
 
 
-def _ghost_stock_error(product, requested_qty, current_qty=0, config=None):
-    """Return an error when the requested cart quantity exceeds stock and ghost stock is off."""
-    config = config or _get_store_config()
+def _pieces_in_cart_for(product_id, cart):
+    """Total pieces of `product_id` in the cart, counting each bulk pack as pieces_per_pack."""
+    total = 0
+    for key, qty in cart.items():
+        base_id, _, opt_id = key.partition(':')
+        if base_id != str(product_id):
+            continue
+        pieces = 1
+        if opt_id:
+            try:
+                pieces = ProductBulkOption.objects.only('pieces_per_pack').get(
+                    id=int(opt_id),
+                ).pieces_per_pack
+            except (ProductBulkOption.DoesNotExist, ValueError, TypeError):
+                continue
+        total += int(qty) * pieces
+    return total
+
+
+def _ghost_stock_error_for_bulk(product, bulk_option, requested_qty, cart, config):
+    """Ghost-stock check that counts *pieces*, not packs, across the whole cart for this product."""
     if config.ghost_stock_enabled:
         return None
-    if product.stock_quantity <= 0:
+    pieces_available = int(product.stock_quantity)
+    if pieces_available <= 0:
         return 'Out of stock'
-    if current_qty + requested_qty > product.stock_quantity:
-        return f'Only {int(product.stock_quantity)} in stock'
+    requested_pieces = requested_qty * (bulk_option.pieces_per_pack if bulk_option else 1)
+    already = _pieces_in_cart_for(product.id, cart)
+    if already + requested_pieces > pieces_available:
+        remaining = max(0, pieces_available - already)
+        if remaining <= 0:
+            return 'You already have the maximum in stock'
+        return f'Only {remaining} more in stock'
     return None
 
 
@@ -346,18 +395,44 @@ def _cart_details(request, apartment_id=None):
     cart = _get_cart(request)
     items = []
     subtotal = Decimal('0.00')
-    for pid_str, qty in cart.items():
+    for key, qty in cart.items():
+        base_id_str, _, opt_id_str = key.partition(':')
         try:
-            product = Product.objects.get(id=int(pid_str), is_active=True)
+            product = Product.objects.get(id=int(base_id_str), is_active=True)
         except Product.DoesNotExist:
             continue
-        line_total = product.selling_price * int(qty)
+
+        bulk_option = None
+        if opt_id_str:
+            try:
+                bulk_option = ProductBulkOption.objects.get(
+                    id=int(opt_id_str),
+                    product=product,
+                    is_active=True,
+                )
+            except (ProductBulkOption.DoesNotExist, ValueError, TypeError):
+                continue
+            unit_price = bulk_option.price
+            pieces_per_pack = bulk_option.pieces_per_pack
+            bulk_label = bulk_option.label
+        else:
+            unit_price = product.selling_price
+            pieces_per_pack = 1
+            bulk_label = ''
+
+        line_total = unit_price * int(qty)
         subtotal += line_total
         items.append({
             'product': product,
+            'bulk_option': bulk_option,
+            'bulk_label': bulk_label,
+            'pieces_per_pack': pieces_per_pack,
+            'unit_price': unit_price,
             'quantity': int(qty),
             'line_total': line_total,
+            'cart_key': key,
         })
+
     config = _get_store_config()
     apartment = None
     if apartment_id:
@@ -418,11 +493,13 @@ def cart_view(request):
 @require_POST
 def cart_update(request, product_id):
     action = request.POST.get('action', 'inc')
+    bulk_option_id_raw = (request.POST.get('bulk_option_id') or '').strip()
+
     if action == 'inc' and not _get_store_config().is_open:
         return HttpResponseForbidden("Store is closed")
 
     cart = _get_cart(request)
-    key = str(product_id)
+    key = f'{product_id}:{bulk_option_id_raw}' if bulk_option_id_raw else str(product_id)
     removed_item_name = None
 
     if key in cart:
@@ -431,10 +508,20 @@ def cart_update(request, product_id):
             if not config.ghost_stock_enabled:
                 product = Product.objects.filter(pk=product_id).first()
                 if product:
-                    stock_error = _ghost_stock_error(
+                    bulk_option = None
+                    if bulk_option_id_raw:
+                        try:
+                            bulk_option = ProductBulkOption.objects.get(
+                                id=int(bulk_option_id_raw),
+                                product=product,
+                            )
+                        except (ProductBulkOption.DoesNotExist, ValueError, TypeError):
+                            pass
+                    stock_error = _ghost_stock_error_for_bulk(
                         product,
+                        bulk_option,
                         requested_qty=1,
-                        current_qty=int(cart[key]),
+                        cart=cart,
                         config=config,
                     )
                     if stock_error:
@@ -458,7 +545,6 @@ def cart_update(request, product_id):
         })
     return response
 
-
 @store_open_required
 def checkout(request):
     apartment_id = request.POST.get('apartment') or request.GET.get('apartment')
@@ -476,16 +562,25 @@ def checkout(request):
         )
         return redirect('cart_view')
     if not config.ghost_stock_enabled:
-        violations = []
+        pieces_by_product = {}
         for item in items:
             product = item['product']
+            entry = pieces_by_product.setdefault(
+                product.id, {'product': product, 'pieces': 0},
+            )
+            entry['pieces'] += item['quantity'] * item['pieces_per_pack']
+
+        violations = []
+        for data in pieces_by_product.values():
+            product = data['product']
+            pieces = data['pieces']
             name = product.parent_group or product.name
             if product.stock_quantity <= 0:
                 violations.append(f'{name} is out of stock.')
-            elif item['quantity'] > product.stock_quantity:
+            elif pieces > product.stock_quantity:
                 violations.append(
-                    f'Only {int(product.stock_quantity)} of {name} in stock — '
-                    f'you have {item["quantity"]} in your cart.'
+                    f'Only {int(product.stock_quantity)} pieces of {name} in stock — '
+                    f'your cart needs {int(pieces)} pieces.'
                 )
         if violations:
             for message in violations:
@@ -566,7 +661,10 @@ def checkout(request):
                     order=order,
                     product=item['product'],
                     quantity=item['quantity'],
-                    price_at_time_of_order=item['product'].selling_price,
+                    price_at_time_of_order=item['unit_price'],
+                    bulk_option=item['bulk_option'],
+                    bulk_label=item['bulk_label'],
+                    pieces_per_pack=item['pieces_per_pack'],
                 )
 
             request.session['cart'] = {}
