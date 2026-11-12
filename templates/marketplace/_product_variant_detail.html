@@ -56,6 +56,36 @@
           data-stock="{{ product.stock_quantity|floatformat:'-2' }}"
           data-current-qty="{{ current_qty }}"
           data-price="{{ product.selling_price|floatformat:'0g' }}">
+        {% with bulks=product.bulk_options.all %}
+        {% if bulks %}
+        <div class="mt-5">
+            <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Packaging</p>
+            <div class="flex flex-wrap gap-2" data-bulk-picker>
+                <button type="button"
+                        data-bulk-id=""
+                        data-bulk-pieces="1"
+                        data-bulk-price="{{ product.selling_price|floatformat:'0g' }}"
+                        class="bulk-pill rounded-xl border-2 px-3 py-2 text-left text-xs font-bold transition-all active:scale-95 border-brand-600 bg-brand-50 text-brand-700">
+                    <span class="block">Single</span>
+                    <span class="block text-[10px] font-semibold tabular-nums opacity-70">UGX {{ product.selling_price|floatformat:"0g" }}</span>
+                </button>
+                {% for bulk in bulks %}
+                <button type="button"
+                        data-bulk-id="{{ bulk.id }}"
+                        data-bulk-pieces="{{ bulk.pieces_per_pack }}"
+                        data-bulk-price="{{ bulk.price|floatformat:'0g' }}"
+                        class="bulk-pill rounded-xl border-2 px-3 py-2 text-left text-xs font-bold transition-all active:scale-95 border-slate-200 bg-white text-slate-600">
+                    <span class="block">{{ bulk.label }}</span>
+                    <span class="block text-[10px] font-semibold tabular-nums opacity-70">UGX {{ bulk.price|floatformat:"0g" }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <input type="hidden" name="bulk_option_id" value="">
+
         <div class="mt-5">
             <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Quantity</p>
             <div class="flex items-center gap-3">
@@ -95,21 +125,59 @@
             if (!form) return;
             const qtyInput = form.querySelector('input[name="qty"]');
             const totalEl = form.querySelector('[data-total-preview]');
+            const bulkInput = form.querySelector('input[name="bulk_option_id"]');
+            const stockHint = container.querySelector('[data-stock-available]');
+            const submitBtn = form.querySelector('button[type="submit"]');
             if (!qtyInput || !totalEl) return;
 
             const ghostOff = form.dataset.ghostOff === '1';
             const stockCap = Math.max(0, Math.floor(Number(form.dataset.stock) || 0));
             const cartQty = parseInt(form.dataset.currentQty, 10) || 0;
-            const maxAddable = ghostOff ? Math.max(0, stockCap - cartQty) : Infinity;
-            const price = Number((form.dataset.price || '').replace(/,/g, '')) || 0;
+            const basePrice = Number((form.dataset.price || '').replace(/,/g, '')) || 0;
+
+            let selectedPieces = 1;
+            let selectedPrice = basePrice;
+            let maxAddable = Infinity;
+
+            function recomputeCap() {
+                if (!ghostOff) {
+                    maxAddable = Infinity;
+                } else {
+                    const remainingPieces = Math.max(0, stockCap - cartQty);
+                    maxAddable = Math.floor(remainingPieces / selectedPieces);
+                }
+            }
+
+            function refreshStockHint() {
+                if (!stockHint || !ghostOff) return;
+                const remainingPieces = Math.max(0, stockCap - cartQty);
+                if (selectedPieces === 1) {
+                    stockHint.textContent = 'Only ' + remainingPieces + ' available';
+                } else {
+                    const packs = Math.floor(remainingPieces / selectedPieces);
+                    stockHint.textContent = 'Only ' + packs + ' available (that size)';
+                }
+            }
 
             function refreshTotal() {
-                if (maxAddable === 0) return;
+                if (maxAddable === 0) {
+                    qtyInput.disabled = true;
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                    }
+                    return;
+                }
+                qtyInput.disabled = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
                 let qty = parseInt(qtyInput.value, 10) || 1;
                 qty = Math.max(1, qty);
                 if (maxAddable !== Infinity) qty = Math.min(qty, maxAddable);
                 qtyInput.value = qty;
-                if (totalEl) totalEl.textContent = 'UGX ' + (price * qty).toLocaleString('en-UG', { maximumFractionDigits: 0 });
+                if (totalEl) totalEl.textContent = 'UGX ' + (selectedPrice * qty).toLocaleString('en-UG', { maximumFractionDigits: 0 });
             }
 
             function bumpQty(delta) {
@@ -160,14 +228,34 @@
             holdRepeat(inc, 1);
             holdRepeat(dec, -1);
 
-            if (maxAddable === 0) {
-                qtyInput.disabled = true;
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
-                }
+            // Bulk packaging pills
+            const picker = container.querySelector('[data-bulk-picker]');
+            if (picker) {
+                picker.addEventListener('click', (evt) => {
+                    const pill = evt.target.closest('.bulk-pill');
+                    if (!pill) return;
+                    picker.querySelectorAll('.bulk-pill').forEach((p) => {
+                        const isSelected = p === pill;
+                        p.classList.toggle('border-brand-600', isSelected);
+                        p.classList.toggle('bg-brand-50', isSelected);
+                        p.classList.toggle('text-brand-700', isSelected);
+                        p.classList.toggle('border-slate-200', !isSelected);
+                        p.classList.toggle('bg-white', !isSelected);
+                        p.classList.toggle('text-slate-600', !isSelected);
+                    });
+                    const rawId = pill.dataset.bulkId || '';
+                    selectedPieces = Math.max(1, parseInt(pill.dataset.bulkPieces, 10) || 1);
+                    selectedPrice = Number((pill.dataset.bulkPrice || '').replace(/,/g, '')) || 0;
+                    if (bulkInput) bulkInput.value = rawId;
+                    qtyInput.value = 1;
+                    recomputeCap();
+                    refreshStockHint();
+                    refreshTotal();
+                });
             }
+
+            recomputeCap();
+            refreshTotal();
         })();
     </script>
     {% endwith %}
