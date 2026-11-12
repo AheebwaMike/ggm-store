@@ -15,8 +15,7 @@ The wrapper decides the width (grid cell, or w-40 shrink-0 inside .snap-row); th
 Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is for the detail page.
 {% endcomment %}
 {% load ggm_ui %}
-{% with img=cover_override|default:image_product|default:product %}
-<article class="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
+{% firstof cover_override image_product product as img %}<article class="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
 
     <div class="relative aspect-square bg-brand-50">
         <a href="{% url 'product_detail' product.id %}"
@@ -90,4 +89,3 @@ Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is f
         </p>
     </div>
 </article>
-{% endwith %}
