@@ -1897,3 +1897,168 @@ class BulkOptionBackendTests(TestCase):
         payload = response.json()
         self.assertEqual(payload[str(self.product.pk)], 3)
         self.assertNotIn(f'{self.product.pk}:{self.carton.pk}', payload)
+
+
+class AddManyToCartTests(TestCase):
+    """Batch-add endpoint (precursor to basket-builder sheet)."""
+
+    def setUp(self):
+        self.config = StoreConfig.objects.get_or_create(pk=1)[0]
+        self.config.ghost_stock_enabled = True
+        self.config.is_open = True
+        self.config.save()
+        self.product = Product.objects.create(
+            code='MANY001',
+            name='Many Test Product',
+            selling_price=Decimal('1000.00'),
+            stock_quantity=Decimal('100.00'),
+            is_active=True,
+        )
+        self.variant_a = Product.objects.create(
+            code='MANY002',
+            name='BBQ Variant',
+            parent_group='Many Flavour Family',
+            variant_label='BBQ',
+            selling_price=Decimal('500.00'),
+            stock_quantity=Decimal('50.00'),
+            is_active=True,
+        )
+        self.variant_b = Product.objects.create(
+            code='MANY003',
+            name='Tomato Variant',
+            parent_group='Many Flavour Family',
+            variant_label='Tomato',
+            selling_price=Decimal('500.00'),
+            stock_quantity=Decimal('50.00'),
+            is_active=True,
+        )
+        self.carton = ProductBulkOption.objects.create(
+            product=self.product,
+            label='Carton of 12',
+            pieces_per_pack=12,
+            price=Decimal('11000.00'),
+            is_active=True,
+        )
+        self.url = reverse('add_many_to_cart')
+
+    def post_items(self, items):
+        return self.client.post(self.url, {'items': json.dumps(items)})
+
+    def test_adds_multiple_products_in_one_call(self):
+        response = self.post_items([
+            {'product_id': self.variant_a.id, 'qty': 2},
+            {'product_id': self.variant_b.id, 'qty': 3},
+            {'product_id': self.product.id, 'qty': 1},
+        ])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'],
+            {
+                str(self.variant_a.id): 2,
+                str(self.variant_b.id): 3,
+                str(self.product.id): 1,
+            },
+        )
+
+    def test_adds_single_and_bulk_of_same_product(self):
+        response = self.post_items([
+            {'product_id': self.product.id, 'qty': 5},
+            {'product_id': self.product.id, 'bulk_option_id': self.carton.id, 'qty': 1},
+        ])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'],
+            {
+                str(self.product.id): 5,
+                f'{self.product.id}:{self.carton.id}': 1,
+            },
+        )
+
+    def test_skips_zero_qty_entries(self):
+        response = self.post_items([
+            {'product_id': self.product.id, 'qty': 0},
+            {'product_id': self.variant_a.id, 'qty': 2},
+        ])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'],
+            {str(self.variant_a.id): 2},
+        )
+
+    def test_invalid_bulk_option_rejected_atomically(self):
+        response = self.post_items([
+            {'product_id': self.variant_a.id, 'qty': 2},
+            {'product_id': self.product.id, 'bulk_option_id': 999999, 'qty': 1},
+        ])
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.client.session.get('cart', {}), {})
+
+    def test_inactive_product_rejected_atomically(self):
+        self.variant_a.is_active = False
+        self.variant_a.save()
+        response = self.post_items([
+            {'product_id': self.variant_b.id, 'qty': 2},
+            {'product_id': self.variant_a.id, 'qty': 1},
+        ])
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.client.session.get('cart', {}), {})
+
+    def test_empty_items_rejected(self):
+        response = self.client.post(self.url, {'items': '[]'})
+        self.assertEqual(response.status_code, 400)
+        response = self.client.post(self.url, {'items': 'not json'})
+        self.assertEqual(response.status_code, 400)
+        response = self.client.post(self.url, {})
+        self.assertEqual(response.status_code, 400)
+
+    def test_ghost_off_sums_pieces_per_product(self):
+        self.config.ghost_stock_enabled = False
+        self.config.save()
+        self.product.stock_quantity = Decimal('10.00')
+        self.product.save()
+
+        response = self.post_items([
+            {'product_id': self.product.id, 'bulk_option_id': self.carton.id, 'qty': 1},
+            {'product_id': self.product.id, 'qty': 5},
+        ])
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.client.session.get('cart', {}), {})
+
+    def test_ghost_off_allows_within_stock(self):
+        self.config.ghost_stock_enabled = False
+        self.config.save()
+        self.product.stock_quantity = Decimal('20.00')
+        self.product.save()
+
+        response = self.post_items([
+            {'product_id': self.product.id, 'bulk_option_id': self.carton.id, 'qty': 1},
+            {'product_id': self.product.id, 'qty': 5},
+        ])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session['cart'],
+            {
+                f'{self.product.id}:{self.carton.id}': 1,
+                str(self.product.id): 5,
+            },
+        )
+
+    def test_closed_store_rejects_batch(self):
+        self.config.is_open = False
+        self.config.save()
+        response = self.post_items([{'product_id': self.product.id, 'qty': 1}])
+        self.assertEqual(response.status_code, 403)
+
+    def test_returns_total_and_cart_update_triggers(self):
+        response = self.post_items([
+            {'product_id': self.product.id, 'qty': 2},
+        ])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'2')
+        self.assertEqual(
+            json.loads(response['HX-Trigger']),
+            {
+                'cartUpdated': '',
+                'ggmToast': {'message': 'Added 2 items to cart'},
+            },
+        )

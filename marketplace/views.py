@@ -243,6 +243,98 @@ def add_to_cart(request, product_id):
     return response
 
 
+@require_POST
+def add_many_to_cart(request):
+    """Add multiple (product_id, bulk_option_id, qty) triples in one atomic request."""
+    config = _get_store_config()
+    if not config.is_open:
+        return HttpResponseForbidden("Store is closed")
+
+    raw = request.POST.get('items', '')
+    if not raw:
+        return HttpResponse('No items', status=400)
+    try:
+        items = json.loads(raw)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return HttpResponse('Invalid items payload', status=400)
+    if not isinstance(items, list) or not items:
+        return HttpResponse('No items', status=400)
+
+    cart = _get_cart(request)
+    pieces_per_product = {}
+    resolved = []
+
+    for entry in items:
+        if not isinstance(entry, dict):
+            return HttpResponse('Invalid item', status=400)
+        try:
+            product_id = int(entry.get('product_id'))
+            qty = int(entry.get('qty', 0))
+        except (TypeError, ValueError):
+            return HttpResponse('Invalid item', status=400)
+        if qty <= 0:
+            continue
+
+        product = Product.objects.filter(id=product_id, is_active=True).first()
+        if not product:
+            return HttpResponse(f'Product {product_id} is unavailable', status=409)
+        if product.manually_disabled:
+            return HttpResponse(f'{product.parent_group or product.name} is unavailable', status=409)
+
+        bulk_option = None
+        bulk_option_id = entry.get('bulk_option_id')
+        if bulk_option_id:
+            try:
+                bulk_option = ProductBulkOption.objects.get(
+                    id=int(bulk_option_id),
+                    product=product,
+                    is_active=True,
+                )
+            except (ProductBulkOption.DoesNotExist, TypeError, ValueError):
+                return HttpResponse('Invalid packaging option', status=400)
+
+        pieces = qty * (bulk_option.pieces_per_pack if bulk_option else 1)
+        pieces_per_product[product.id] = pieces_per_product.get(product.id, 0) + pieces
+        resolved.append((product, bulk_option, qty))
+
+    if not resolved:
+        return HttpResponse('No items', status=400)
+
+    if not config.ghost_stock_enabled:
+        for product_id, new_pieces in pieces_per_product.items():
+            product = Product.objects.filter(id=product_id).first()
+            if not product:
+                continue
+            existing = _pieces_in_cart_for(product_id, cart)
+            name = product.parent_group or product.name
+            if product.stock_quantity <= 0:
+                return HttpResponse(f'{name} is out of stock', status=409)
+            if existing + new_pieces > product.stock_quantity:
+                remaining = max(0, int(product.stock_quantity) - existing)
+                return HttpResponse(
+                    f'Only {remaining} more piece{"s" if remaining != 1 else ""} of {name} in stock',
+                    status=409,
+                )
+
+    total_added = 0
+    for product, bulk_option, qty in resolved:
+        key = f'{product.id}:{bulk_option.id}' if bulk_option else str(product.id)
+        cart[key] = int(cart.get(key, 0)) + qty
+        total_added += qty
+
+    _save_cart(request, cart)
+
+    total = _cart_total_items(cart)
+    response = HttpResponse(str(total))
+    response['HX-Trigger'] = json.dumps({
+        'cartUpdated': '',
+        'ggmToast': {
+            'message': f'Added {total_added} item{"s" if total_added != 1 else ""} to cart',
+        },
+    })
+    return response
+
+
 def cart_quantities_json(request):
     """Return {product_id: singles_qty} — bulk-option lines are excluded, so the card pill
     reflects only the customer's single-unit count for that product."""
