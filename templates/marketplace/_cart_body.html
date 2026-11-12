@@ -21,7 +21,11 @@
         {% for item in items %}
         <li class="flex gap-3 rounded-2xl bg-white p-3 shadow-card ring-1 ring-slate-900/5">
             <a href="{% url 'product_detail' item.product.id %}" aria-label="View {{ item.product.name }}">
-                {% include "marketplace/_thumb.html" with product=item.product box="h-[4.5rem] w-[4.5rem]" %}
+                {% if item.bulk_option and item.bulk_option.image %}
+                    {% include "marketplace/_thumb.html" with product=item.bulk_option box="h-[4.5rem] w-[4.5rem]" %}
+                {% else %}
+                    {% include "marketplace/_thumb.html" with product=item.product box="h-[4.5rem] w-[4.5rem]" %}
+                {% endif %}
             </a>
 
             <div class="flex min-w-0 flex-1 flex-col">

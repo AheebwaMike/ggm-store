@@ -25,13 +25,15 @@
         </div>
 
         <div class="mx-5 mb-3 aspect-[4/3] overflow-hidden rounded-2xl bg-brand-50">
-            {% if product.image %}
-                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="h-full w-full object-contain">
-            {% else %}
-                <span class="grid h-full w-full place-items-center text-orange-200">
-                    <i data-lucide="shopping-basket" class="h-16 w-16"></i>
-                </span>
-            {% endif %}
+            <img src="{% if product.image %}{{ product.image.url }}{% endif %}"
+                 alt="{{ product.name }}"
+                 class="h-full w-full object-contain {% if not product.image %}hidden{% endif %}"
+                 data-sheet-hero-img
+                 data-product-image="{% if product.image %}{{ product.image.url }}{% endif %}">
+            <span class="grid h-full w-full place-items-center text-orange-200 {% if product.image %}hidden{% endif %}"
+                  data-sheet-hero-placeholder>
+                <i data-lucide="shopping-basket" class="h-16 w-16"></i>
+            </span>
         </div>
 
         <div class="flex-1 overflow-y-auto px-5">
@@ -60,6 +62,7 @@
                             data-bulk-id=""
                             data-bulk-pieces="1"
                             data-bulk-price="{{ product.selling_price|floatformat:'0g' }}"
+                            data-bulk-image=""
                             class="bulk-pill rounded-xl border-2 px-3 py-2 text-left text-xs font-bold transition-all active:scale-95 border-brand-600 bg-brand-50 text-brand-700">
                         <span class="block">Single</span>
                         <span class="block text-[10px] font-semibold tabular-nums opacity-70">UGX {{ product.selling_price|floatformat:"0g" }}</span>
@@ -69,6 +72,7 @@
                             data-bulk-id="{{ bulk.id }}"
                             data-bulk-pieces="{{ bulk.pieces_per_pack }}"
                             data-bulk-price="{{ bulk.price|floatformat:'0g' }}"
+                            data-bulk-image="{% if bulk.image %}{{ bulk.image.url }}{% endif %}"
                             class="bulk-pill rounded-xl border-2 px-3 py-2 text-left text-xs font-bold transition-all active:scale-95 border-slate-200 bg-white text-slate-600">
                         <span class="block">{{ bulk.label }}</span>
                         <span class="block text-[10px] font-semibold tabular-nums opacity-70">UGX {{ bulk.price|floatformat:"0g" }}</span>
@@ -230,6 +234,24 @@
 
         // Bulk packaging pills
         const picker = sheet.querySelector('[data-bulk-picker]');
+        const heroImg = sheet.querySelector('[data-sheet-hero-img]');
+        const heroPlaceholder = sheet.querySelector('[data-sheet-hero-placeholder]');
+
+        function showHero(url) {
+            if (!heroImg || !heroPlaceholder) return;
+            const productImage = heroImg.dataset.productImage || '';
+            const target = url || productImage;
+            if (target) {
+                heroImg.src = target;
+                heroImg.classList.remove('hidden');
+                heroPlaceholder.classList.add('hidden');
+            } else {
+                heroImg.classList.add('hidden');
+                heroPlaceholder.classList.remove('hidden');
+                if (window.lucide) window.lucide.createIcons();
+            }
+        }
+
         if (picker) {
             picker.addEventListener('click', (evt) => {
                 const pill = evt.target.closest('.bulk-pill');
@@ -247,12 +269,12 @@
                 selectedPieces = Math.max(1, parseInt(pill.dataset.bulkPieces, 10) || 1);
                 selectedPrice = Number((pill.dataset.bulkPrice || '').replace(/,/g, '')) || 0;
                 if (bulkInput) bulkInput.value = rawId;
+                showHero(pill.dataset.bulkImage || '');
                 qtyInput.value = 1;
                 recomputeCap();
                 refreshTotal();
             });
         }
-
         recomputeCap();
         refreshTotal();
     })();
