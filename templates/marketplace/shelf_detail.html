@@ -19,7 +19,7 @@
 
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
     {% for item in items %}
-        {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count kind_label=item.kind_label min_price=item.min_price image_product=item.image_product %}
+        {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count kind_label=item.kind_label min_price=item.min_price image_product=item.image_product cover_override=item.cover_override %}
     {% empty %}
         <div class="col-span-full rounded-2xl bg-white py-14 text-center shadow-card ring-1 ring-slate-900/5">
             <p class="text-lg font-bold text-slate-700">Nothing here right now</p>

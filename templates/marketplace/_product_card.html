@@ -15,14 +15,14 @@ The wrapper decides the width (grid cell, or w-40 shrink-0 inside .snap-row); th
 Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is for the detail page.
 {% endcomment %}
 {% load ggm_ui %}
-{% with img=image_product|default:product %}
+{% with img=cover_override|default:image_product|default:product %}
 <article class="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
 
     <div class="relative aspect-square bg-brand-50">
         <a href="{% url 'product_detail' product.id %}"
            class="absolute inset-0 block"
            aria-label="View {{ parent_name|default:product.name }}">
-            {% if img.image and img.thumbnail_url %}
+            {% if img.thumbnail_url %}
                 <img src="{{ img.thumbnail_url }}" alt="" width="300" height="300"
                      loading="lazy" decoding="async"
                      class="h-full w-full object-cover">
