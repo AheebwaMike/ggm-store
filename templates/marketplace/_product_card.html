@@ -6,16 +6,24 @@ Plain product (Buy Again / Featured carousels):
     {% include "marketplace/_product_card.html" with product=product promo=True %}
 
 Item from _group_products (search results and category pages):
-    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product kind_label=item.kind_label %}
+    {% include "marketplace/_product_card.html" with product=item.product is_group=item.is_group parent_name=item.parent_name variant_count=item.variant_count min_price=item.min_price image_product=item.image_product kind_label=item.kind_label cover_override=item.cover_override %}
 
 image_product (optional): the product whose photo to show. For a variant group it is the first
 variant that has a photo, so a group never looks empty because one size lacks an image.
 
+cover_override (optional): a Family instance whose cover_image should take priority over
+image_product. Only passed by include sites that iterate _group_products / family_item
+results. Plain product includes (Buy Again, Featured) omit it and the fallback chain
+resolves to their product.
+
 The wrapper decides the width (grid cell, or w-40 shrink-0 inside .snap-row); the card fills it.
-Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is for the detail page.
+Images: img.thumbnail_url (300x300 Cloudinary). Works for both Product and Family because
+both expose a thumbnail_url property that returns None when there is no image.
 {% endcomment %}
 {% load ggm_ui %}
-{% firstof cover_override image_product product as img %}<article class="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
+{% with img=image_product|default:product %}
+{% with img=cover_override|default:img %}
+<article class="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-slate-900/5">
 
     <div class="relative aspect-square bg-brand-50">
         <a href="{% url 'product_detail' product.id %}"
@@ -89,3 +97,5 @@ Images: product.thumbnail_url (300x300 Cloudinary) only. The large original is f
         </p>
     </div>
 </article>
+{% endwith %}
+{% endwith %}
