@@ -135,6 +135,18 @@ class ProductBulkOption(models.Model):
     def __str__(self):
         return f"{self.product.name} — {self.label}"
 
+    @property
+    def thumbnail_url(self):
+        """Small, compressed image for carts, orders and the sheet hero (about 300x300)."""
+        if not self.image:
+            return None
+        storage = self.image.storage
+        if hasattr(storage, 'transformed_url'):
+            return storage.transformed_url(
+                self.image.name, width=300, height=300, crop='pad', background='auto',
+            )
+        return self.image.url
+
 
 class Family(models.Model):
     """A variant family's metadata. Linked to Product.parent_group by name (not by FK)."""
@@ -155,6 +167,18 @@ class Family(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def thumbnail_url(self):
+        """Poster shot of the whole variant family, sized for the product card."""
+        if not self.cover_image:
+            return None
+        storage = self.cover_image.storage
+        if hasattr(storage, 'transformed_url'):
+            return storage.transformed_url(
+                self.cover_image.name, width=300, height=300, crop='pad', background='auto',
+            )
+        return self.cover_image.url
 
 
 class FamilyDismissal(models.Model):
